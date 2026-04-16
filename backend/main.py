@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from workout_routes import workout_router
+from backend.routes.workout_routes import workout_router
 
 app = FastAPI(title="Weight Tracker - Weightlifting Tracker")
 

@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException
 
-from models import ExerciseRequest, SessionRequest
+from backend.models import ExerciseRequest, SessionRequest
 
 workout_router = APIRouter()
 
