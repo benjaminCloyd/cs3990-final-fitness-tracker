@@ -1,106 +1,266 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Weight Tracker</title>
-  <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon">
+  <title>Fitness Tracker App</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link
-    href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=JetBrains+Mono:wght@400;600;700&family=Barlow+Condensed:wght@300;400;600;700&display=swap"
-    rel="stylesheet">
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
-  <link rel="stylesheet" href="/style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=JetBrains+Mono:wght@400;600;700&family=Barlow+Condensed:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
 </head>
-
 <body>
 
   <header>
-    <div class="logo">Weight Tracker</div>
+    <div class="logo">FIT TRACKER</div>
+    <div class="tagline">SYSTEM // V1.0</div>
     <nav class="nav-tabs">
-      <button class="nav-tab active" id="tab-sessions" onclick="showPanel('sessions', this)">Sessions</button>
-      <button class="nav-tab" id="tab-progress" onclick="showPanel('progress', this)">Progress</button>
+      <button class="nav-tab active" data-target="dashboard">Dashboard</button>
+      <button class="nav-tab" data-target="workouts">Workouts</button>
+      <button class="nav-tab" data-target="recipes">Recipes</button>
+      <button class="nav-tab" data-target="mealplan">Meal Planner</button>
+      <button class="nav-tab" data-target="admin">Admin</button>
     </nav>
   </header>
 
   <div class="app">
 
-    <!-- sessions -->
-    <section class="panel active" id="panel-sessions">
+    <!-- DASHBOARD PANEL -->
+    <section class="panel active" id="panel-dashboard">
+      <div class="panel-content">
+        <div class="panel-header">
+          <h2>OVERVIEW DASHBOARD</h2>
+          <div class="subtitle">WELCOME BACK, USER</div>
+        </div>
+        <div class="stat-row">
+          <div class="stat-box">
+            <div class="stat-val">4</div>
+            <div class="stat-label">WORKOUTS THIS WEEK</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-val">2,450</div>
+            <div class="stat-label">AVG DAILY KCAL</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-val">185</div>
+            <div class="stat-label">CURRENT WEIGHT (LBS)</div>
+          </div>
+        </div>
+        <div class="content-section">
+          <h3>RECENT ACTIVITY</h3>
+          <ul class="activity-list">
+            <li>Logged workout: <strong>Push Day</strong> (Yesterday)</li>
+            <li>Created recipe: <strong>Chicken & Rice Bowl</strong> (2 days ago)</li>
+            <li>Generated Grocery List for <strong>Week of Mar 15</strong> (3 days ago)</li>
+          </ul>
+        </div>
+      </div>
+    </section>
 
-      <aside class="sessions-sidebar">
+    <!-- WORKOUTS PANEL -->
+    <section class="panel" id="panel-workouts">
+      <aside class="sidebar">
         <div class="sidebar-header">
           <h2>WORKOUTS</h2>
         </div>
-
         <div class="create-form">
           <div class="form-row">
             <label>Session Name</label>
-            <input type="text" id="new-session-name" placeholder="Push Day, Leg Day…">
+            <input type="text" placeholder="Push Day, Leg Day…">
           </div>
           <div class="form-row">
             <label>Date</label>
-            <input type="text" id="new-session-date" placeholder="MM/DD/YYYY" autocomplete="off">
+            <input type="date">
           </div>
-          <div id="session-msg"
-            style="font-family:'JetBrains Mono',monospace;font-size:0.72rem;color:var(--danger);margin-bottom:8px">
-          </div>
-          <button class="btn btn-primary btn-full" id="create-session-btn">+ CREATE SESSION</button>
+          <button class="btn btn-primary btn-full">+ CREATE SESSION</button>
         </div>
-
-        <div class="session-list" id="session-list">
-          <div class="empty-state">
-            <p>No sessions yet.<br>Create your first workout.</p>
+        <div class="list-container">
+          <!-- Placeholder Session -->
+          <div class="list-item selected">
+            <div style="flex:1;min-width:0">
+              <div class="item-meta">MAR 14, 2026</div>
+              <div class="item-name">Pull Day</div>
+              <div class="item-meta">4 exercises</div>
+            </div>
+            <button class="btn-danger del-btn">DEL</button>
           </div>
         </div>
       </aside>
-
-      <div class="session-detail">
-        <div class="detail-placeholder" id="detail-placeholder">
-          <p>Select a session to view</p>
-        </div>
-        <div class="detail-content" id="detail-content" style="display:none"></div>
-      </div>
-
-    </section>
-
-    <!-- progress -->
-    <section class="panel" id="panel-progress">
-
-      <div class="progress-header">
-        <h2>1RM PROGRESS TRACKER</h2>
-        <div class="subtitle">EPLEY FORMULA: 1RM = WEIGHT × (1 + REPS ÷ 30)</div>
-      </div>
-
-      <div>
-        <div class="pill-label">SELECT EXERCISE</div>
-        <div class="exercise-selector" id="exercise-pills">
-          <span class="muted-text">Log exercises in sessions first.</span>
-        </div>
-      </div>
-
-      <div class="stat-row" id="stat-row" style="display:none"></div>
-
-      <div class="chart-wrapper">
-        <div class="no-data-chart" id="chart-placeholder">
-          <span>SELECT AN EXERCISE ABOVE</span>
-        </div>
-        <div id="chart-content" style="display:none">
-          <div class="chart-title" id="chart-title"></div>
-          <div class="chart-subtitle">ESTIMATED ONE-REP MAX OVER TIME // LBS</div>
-          <div class="canvas-container">
-            <canvas id="progress-chart"></canvas>
+      <div class="detail-pane">
+        <div class="detail-content">
+          <div class="detail-header">
+            <div>
+              <div class="title-large">PULL DAY</div>
+              <div class="badge">MAR 14, 2026</div>
+            </div>
+            <div style="flex:1"></div>
+            <button class="btn-danger">DELETE SESSION</button>
+          </div>
+          <div class="content-section">
+            <h3>LOG EXERCISE</h3>
+            <div class="form-row">
+              <label>Exercise Name</label>
+              <input type="text" placeholder="Deadlift, Barbell Row…">
+            </div>
+            <div class="form-row">
+              <div class="set-inputs">
+                <input type="number" placeholder="LBS">
+                <input type="number" placeholder="REPS">
+                <button class="btn-ghost">+ ADD SET</button>
+              </div>
+            </div>
+            <button class="btn btn-primary">LOG EXERCISE</button>
           </div>
         </div>
       </div>
-
     </section>
+
+    <!-- RECIPES PANEL -->
+    <section class="panel" id="panel-recipes">
+      <aside class="sidebar">
+        <div class="sidebar-header">
+          <h2>RECIPES</h2>
+        </div>
+        <div class="create-form">
+          <button class="btn btn-primary btn-full">+ ADD NEW RECIPE</button>
+        </div>
+        <div class="list-container">
+          <div class="list-item selected">
+            <div style="flex:1;min-width:0">
+              <div class="item-name">Chicken & Rice Bowl</div>
+              <div class="item-meta">550 kcal | 45g Protein</div>
+            </div>
+          </div>
+          <div class="list-item">
+            <div style="flex:1;min-width:0">
+              <div class="item-name">Overnight Oats</div>
+              <div class="item-meta">320 kcal | 15g Protein</div>
+            </div>
+          </div>
+        </div>
+      </aside>
+      <div class="detail-pane">
+        <div class="detail-content">
+          <div class="detail-header">
+            <div>
+              <div class="title-large">CHICKEN & RICE BOWL</div>
+              <div class="badge">LUNCH / DINNER</div>
+            </div>
+            <div style="flex:1"></div>
+            <button class="btn-edit">EDIT</button>
+            <button class="btn-danger">DELETE</button>
+          </div>
+          <div class="stat-row">
+            <div class="stat-box"><div class="stat-val">550</div><div class="stat-label">CALORIES</div></div>
+            <div class="stat-box"><div class="stat-val">45g</div><div class="stat-label">PROTEIN</div></div>
+            <div class="stat-box"><div class="stat-val">50g</div><div class="stat-label">CARBS</div></div>
+            <div class="stat-box"><div class="stat-val">15g</div><div class="stat-label">FAT</div></div>
+          </div>
+          <div class="content-section" style="margin-top: 24px;">
+            <h3>INGREDIENTS</h3>
+            <ul class="activity-list">
+              <li>150g Chicken Breast</li>
+              <li>100g Jasmine Rice</li>
+              <li>50g Broccoli</li>
+              <li>15ml Soy Sauce</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- MEAL PLANNER PANEL -->
+    <section class="panel" id="panel-mealplan">
+      <div class="panel-content">
+        <div class="panel-header" style="display:flex; justify-content:space-between;">
+          <div>
+            <h2>MEAL PLANNER</h2>
+            <div class="subtitle">WEEK OF MAR 15, 2026</div>
+          </div>
+          <button class="btn btn-primary">GENERATE GROCERY LIST</button>
+        </div>
+        <div class="planner-grid">
+          <!-- Day Columns -->
+          <div class="day-col">
+            <div class="day-header">MONDAY</div>
+            <div class="meal-slot">
+              <div class="slot-label">BREAKFAST</div>
+              <div class="slot-content">Overnight Oats</div>
+            </div>
+            <div class="meal-slot">
+              <div class="slot-label">LUNCH</div>
+              <div class="slot-content">Chicken & Rice Bowl</div>
+            </div>
+            <div class="meal-slot">
+              <div class="slot-label">DINNER</div>
+              <div class="slot-content">+ Add Meal</div>
+            </div>
+          </div>
+          <div class="day-col">
+            <div class="day-header">TUESDAY</div>
+            <div class="meal-slot">
+              <div class="slot-label">BREAKFAST</div>
+              <div class="slot-content">+ Add Meal</div>
+            </div>
+            <div class="meal-slot">
+              <div class="slot-label">LUNCH</div>
+              <div class="slot-content">+ Add Meal</div>
+            </div>
+            <div class="meal-slot">
+              <div class="slot-label">DINNER</div>
+              <div class="slot-content">+ Add Meal</div>
+            </div>
+          </div>
+          <!-- Additional days would repeat here -->
+        </div>
+      </div>
+    </section>
+
+    <!-- ADMIN PANEL -->
+    <section class="panel" id="panel-admin">
+      <div class="panel-content">
+        <div class="panel-header">
+          <h2>ADMINISTRATION</h2>
+          <div class="subtitle">SYSTEM LOGS & USER MANAGEMENT</div>
+        </div>
+        <div class="content-section">
+          <h3>REGISTERED USERS</h3>
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>USERNAME</th>
+                <th>ROLE</th>
+                <th>STATUS</th>
+                <th>ACTIONS</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>john_doe</td>
+                <td>User</td>
+                <td><span style="color:var(--green)">Active</span></td>
+                <td><button class="btn-danger">DEACTIVATE</button></td>
+              </tr>
+              <tr>
+                <td>admin_jane</td>
+                <td>Admin</td>
+                <td><span style="color:var(--green)">Active</span></td>
+                <td><button class="btn-edit" disabled>DEACTIVATE</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="content-section" style="margin-top: 32px;">
+          <h3>RECENT SERVER LOGS</h3>
+          <div class="log-viewer">
+            [2026-03-14 08:22:10] INFO: User john_doe authenticated successfully.<br>[2026-03-14 09:15:44] INFO: File uploaded: recipe_img_102.jpg.<br>
+            [2026-03-14 11:05:01] ERROR: Failed API call to USDA Food Details endpoint.<br>[2026-03-14 12:30:22] INFO: User admin_jane accessed administration panel.
+          </div>
+        </div>
+      </div>
+    </section>
+
   </div>
 
-  <div id="toast"></div>
-
-  <script src="/main.js"></script>
+  <script src="main.js"></script>
 </body>
-
 </html>
