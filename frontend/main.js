@@ -1,4 +1,5 @@
 const BASE_URL = '/sessions';
+const AUTH_URL = '/auth';
 
 let sessions = [];
 let selectedSessionId = null;
@@ -6,85 +7,203 @@ let activeExercise = null;
 let progressChart = null;
 let setCount = 0;
 
-// api stuff
+// ── auth state ────────────────────────────────────────────────────────────────
 
-const getSessions = async () => {
-  try {
-    const res = await fetch(BASE_URL, { method: 'GET', headers: { 'Content-Type': 'application/json' } });
-    if (!res.ok) throw new Error(`HTTP error! Status: ${res.status}`);
-    return await res.json();
-  } catch (err) { console.error('Error fetching sessions:', err); throw err; }
-};
+let authToken = localStorage.getItem('token') || null;
+let currentUser = localStorage.getItem('username') || null;
+let currentRole = localStorage.getItem('role') || null;
 
-const createSession = async (session) => {
+function saveAuth(token, username, role) {
+  authToken = token;
+  currentUser = username;
+  currentRole = role;
+  localStorage.setItem('token', token);
+  localStorage.setItem('username', username);
+  localStorage.setItem('role', role);
+}
+
+function clearAuth() {
+  authToken = null;
+  currentUser = null;
+  currentRole = null;
+  localStorage.removeItem('token');
+  localStorage.removeItem('username');
+  localStorage.removeItem('role');
+}
+
+function authHeaders() {
+  return {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${authToken}`,
+  };
+}
+
+function handleUnauthorized() {
+  clearAuth();
+  showAuthOverlay();
+}
+
+// ── auth overlay ──────────────────────────────────────────────────────────────
+
+function showAuthOverlay() {
+  document.getElementById('auth-overlay').style.display = 'flex';
+}
+
+function hideAuthOverlay() {
+  document.getElementById('auth-overlay').style.display = 'none';
+}
+
+function switchAuthTab(tab) {
+  const tabs = document.querySelectorAll('.auth-tab');
+  tabs.forEach((t, i) => t.classList.toggle('active', (i === 0) === (tab === 'login')));
+  document.getElementById('auth-login').style.display = tab === 'login' ? '' : 'none';
+  document.getElementById('auth-signup').style.display = tab === 'signup' ? '' : 'none';
+  document.getElementById('login-error').textContent = '';
+  document.getElementById('signup-error').textContent = '';
+}
+
+async function handleLogin() {
+  const username = document.getElementById('login-username').value.trim();
+  const password = document.getElementById('login-password').value;
+  const errEl = document.getElementById('login-error');
+  errEl.textContent = '';
+
+  if (!username || !password) { errEl.textContent = 'Enter username and password.'; return; }
+
   try {
-    const res = await fetch(BASE_URL, {
+    const form = new URLSearchParams();
+    form.append('username', username);
+    form.append('password', password);
+
+    const res = await fetch(`${AUTH_URL}/sign-in`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: form,
+    });
+
+    if (res.status === 401) { errEl.textContent = 'Invalid username or password.'; return; }
+    if (!res.ok) { errEl.textContent = 'Login failed. Try again.'; return; }
+
+    const data = await res.json();
+    saveAuth(data.access_token, data.username, data.role);
+    hideAuthOverlay();
+    initApp();
+  } catch (err) {
+    errEl.textContent = 'Network error. Is the server running?';
+  }
+}
+
+async function handleSignup() {
+  const username = document.getElementById('signup-username').value.trim();
+  const password = document.getElementById('signup-password').value;
+  const errEl = document.getElementById('signup-error');
+  errEl.textContent = '';
+
+  if (!username || !password) { errEl.textContent = 'Enter username and password.'; return; }
+  if (password.length < 6) { errEl.textContent = 'Password must be at least 6 characters.'; return; }
+
+  try {
+    const res = await fetch(`${AUTH_URL}/signup`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(session),
+      body: JSON.stringify({ username, password }),
     });
-    if (!res.ok) throw new Error(`HTTP error! Status: ${res.status}`);
-    return await res.json();
-  } catch (err) { console.error('Error creating session:', err); throw err; }
-};
+
+    if (res.status === 409) { errEl.textContent = 'Username already taken.'; return; }
+    if (!res.ok) { errEl.textContent = 'Signup failed. Try again.'; return; }
+
+    // auto-login after signup
+    document.getElementById('login-username').value = username;
+    document.getElementById('login-password').value = password;
+    switchAuthTab('login');
+    await handleLogin();
+  } catch (err) {
+    errEl.textContent = 'Network error. Is the server running?';
+  }
+}
+
+function handleLogout() {
+  clearAuth();
+  sessions = [];
+  selectedSessionId = null;
+  activeExercise = null;
+  if (progressChart) { progressChart.destroy(); progressChart = null; }
+  showAuthOverlay();
+  document.getElementById('header-user').style.display = 'none';
+  // Remove admin tab if present
+  const adminTab = document.getElementById('tab-admin');
+  if (adminTab) adminTab.remove();
+}
+
+// ── header user display ───────────────────────────────────────────────────────
+
+function renderHeaderUser() {
+  const wrap = document.getElementById('header-user');
+  wrap.style.display = 'flex';
+  document.getElementById('header-username').textContent = currentUser;
+  const badge = document.getElementById('header-role-badge');
+  badge.textContent = currentRole.toUpperCase();
+  badge.className = 'role-badge role-' + currentRole;
+
+  // Inject admin tab if needed and not already present
+  if (currentRole === 'admin' && !document.getElementById('tab-admin')) {
+    const nav = document.getElementById('nav-tabs');
+    const btn = document.createElement('button');
+    btn.className = 'nav-tab';
+    btn.id = 'tab-admin';
+    btn.textContent = 'Users';
+    btn.onclick = function () { showPanel('admin', this); };
+    nav.appendChild(btn);
+  }
+}
+
+// ── api helpers ───────────────────────────────────────────────────────────────
+
+async function apiFetch(url, options = {}) {
+  const res = await fetch(url, {
+    ...options,
+    headers: { ...authHeaders(), ...(options.headers || {}) },
+  });
+  if (res.status === 401 || res.status === 403) {
+    handleUnauthorized();
+    throw new Error('Unauthorized');
+  }
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res;
+}
+
+const getSessions = async () => (await apiFetch(BASE_URL)).json();
+
+const createSession = async (session) =>
+  (await apiFetch(BASE_URL, { method: 'POST', body: JSON.stringify(session) })).json();
 
 const deleteSession = async (id) => {
-  try {
-    const res = await fetch(`${BASE_URL}/${id}`, { method: 'DELETE', headers: { 'Content-Type': 'application/json' } });
-    if (!res.ok) throw new Error(`HTTP error! Status: ${res.status}`);
-    return true;
-  } catch (err) { console.error('Error deleting session:', err); throw err; }
+  await apiFetch(`${BASE_URL}/${id}`, { method: 'DELETE' });
+  return true;
 };
 
-const getSession = async (id) => {
-  try {
-    const res = await fetch(`${BASE_URL}/${id}`, { method: 'GET', headers: { 'Content-Type': 'application/json' } });
-    if (!res.ok) throw new Error(`HTTP error! Status: ${res.status}`);
-    return await res.json();
-  } catch (err) { console.error('Error fetching session:', err); throw err; }
-};
+const getSession = async (id) => (await apiFetch(`${BASE_URL}/${id}`)).json();
 
-const createExercise = async (sessionId, exercise) => {
-  try {
-    const res = await fetch(`${BASE_URL}/${sessionId}/exercises`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(exercise),
-    });
-    if (!res.ok) throw new Error(`HTTP error! Status: ${res.status}`);
-    return await res.json();
-  } catch (err) { console.error('Error creating exercise:', err); throw err; }
-};
+const createExercise = async (sessionId, exercise) =>
+  (await apiFetch(`${BASE_URL}/${sessionId}/exercises`, { method: 'POST', body: JSON.stringify(exercise) })).json();
 
-const updateExercise = async (sessionId, exId, exercise) => {
-  try {
-    const res = await fetch(`${BASE_URL}/${sessionId}/exercises/${exId}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(exercise),
-    });
-    if (!res.ok) throw new Error(`HTTP error! Status: ${res.status}`);
-    return await res.json();
-  } catch (err) { console.error('Error updating exercise:', err); throw err; }
-};
+const updateExercise = async (sessionId, exId, exercise) =>
+  (await apiFetch(`${BASE_URL}/${sessionId}/exercises/${exId}`, { method: 'PUT', body: JSON.stringify(exercise) })).json();
 
 const deleteExercise = async (sessionId, exId) => {
-  try {
-    const res = await fetch(`${BASE_URL}/${sessionId}/exercises/${exId}`, { method: 'DELETE', headers: { 'Content-Type': 'application/json' } });
-    if (!res.ok) throw new Error(`HTTP error! Status: ${res.status}`);
-    return true;
-  } catch (err) { console.error('Error deleting exercise:', err); throw err; }
+  await apiFetch(`${BASE_URL}/${sessionId}/exercises/${exId}`, { method: 'DELETE' });
+  return true;
 };
 
-const getProgress = async (exerciseName) => {
-  try {
-    const res = await fetch(`${BASE_URL}/progress/${encodeURIComponent(exerciseName)}`, { method: 'GET', headers: { 'Content-Type': 'application/json' } });
-    if (!res.ok) throw new Error(`HTTP error! Status: ${res.status}`);
-    return await res.json();
-  } catch (err) { console.error('Error fetching progress:', err); throw err; }
-};
+const getProgress = async (exerciseName) =>
+  (await apiFetch(`${BASE_URL}/progress/${encodeURIComponent(exerciseName)}`)).json();
 
-// helpers
+const getUsers = async () => (await apiFetch(`${AUTH_URL}/users`)).json();
+
+const setUserRole = async (username, role) =>
+  (await apiFetch(`${AUTH_URL}/users/${username}/role?role=${role}`, { method: 'PUT' })).json();
+
+// ── helpers ───────────────────────────────────────────────────────────────────
 
 function toast(msg, type = 'ok') {
   const el = document.getElementById('toast');
@@ -95,13 +214,18 @@ function toast(msg, type = 'ok') {
 }
 
 function showPanel(name, btn) {
-  document.getElementById('panel-sessions').classList.remove('active');
-  document.getElementById('panel-progress').classList.remove('active');
-  document.getElementById('tab-sessions').classList.remove('active');
-  document.getElementById('tab-progress').classList.remove('active');
-  document.getElementById('panel-' + name).classList.add('active');
-  btn.classList.add('active');
+  ['sessions', 'progress', 'admin'].forEach(p => {
+    const panel = document.getElementById('panel-' + p);
+    if (panel) panel.classList.remove('active');
+  });
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+
+  const target = document.getElementById('panel-' + name);
+  if (target) target.classList.add('active');
+  if (btn) btn.classList.add('active');
+
   if (name === 'progress') loadProgressPanel();
+  if (name === 'admin') loadAdminPanel();
 }
 
 function formatDate(date) {
@@ -149,7 +273,7 @@ function resetNewSets() {
   addSetRow('sets-container');
 }
 
-// sessions
+// ── sessions ──────────────────────────────────────────────────────────────────
 
 const refreshSessions = () => {
   const el = document.getElementById('session-list');
@@ -158,17 +282,20 @@ const refreshSessions = () => {
     return;
   }
   el.innerHTML = '';
-  sessions.map(s => {
+  sessions.forEach(s => {
+    const ownerBadge = currentRole === 'admin' && s.owner
+      ? `<div class="s-owner">@${s.owner}</div>` : '';
     el.innerHTML += `
       <div id="session-${s.id}" class="session-item ${s.id === selectedSessionId ? 'selected' : ''}"
-           onclick="selectSession(${s.id})">
+           onclick="selectSession('${s.id}')">
         <div style="flex:1;min-width:0">
           <div class="s-date">${formatDate(s.date)}</div>
           <div class="s-name">${s.name}</div>
+          ${ownerBadge}
           <div class="s-meta">${s.exercises.length} exercise${s.exercises.length !== 1 ? 's' : ''}</div>
         </div>
         <button class="btn-danger del-btn"
-                onclick="event.stopPropagation(); removeSession(${s.id})">DEL</button>
+                onclick="event.stopPropagation(); removeSession('${s.id}')">DEL</button>
       </div>
     `;
   });
@@ -184,19 +311,23 @@ document.getElementById('create-session-btn').addEventListener('click', async ()
     return;
   }
 
-  await createSession({ name: nameInput.value.trim(), date: dateInput.value }).then(s => {
+  try {
+    const s = await createSession({ name: nameInput.value.trim(), date: dateInput.value });
     sessions.unshift(s);
     refreshSessions();
     msgDiv.innerHTML = '';
     nameInput.value = '';
     toast(`Session "${s.name}" created.`);
     selectSession(s.id);
-  });
+  } catch (err) {
+    if (err.message !== 'Unauthorized') toast('Failed to create session.', 'error');
+  }
 });
 
 const removeSession = async (id) => {
   if (!confirm('Delete this session and all its exercises?')) return;
-  await deleteSession(id).then(() => {
+  try {
+    await deleteSession(id);
     sessions = sessions.filter(s => s.id !== id);
     toast('Session deleted.');
     if (selectedSessionId === id) {
@@ -205,20 +336,25 @@ const removeSession = async (id) => {
       document.getElementById('detail-content').style.display = 'none';
     }
     refreshSessions();
-  });
+  } catch (err) {
+    if (err.message !== 'Unauthorized') toast('Failed to delete session.', 'error');
+  }
 };
 
 const selectSession = async (id) => {
   selectedSessionId = id;
-  await getSession(id).then(session => {
+  try {
+    const session = await getSession(id);
     const idx = sessions.findIndex(s => s.id === id);
     if (idx !== -1) sessions[idx] = session;
     refreshSessions();
     renderSessionDetail(session);
-  });
+  } catch (err) {
+    if (err.message !== 'Unauthorized') toast('Could not load session.', 'error');
+  }
 };
 
-// session detail
+// ── session detail ────────────────────────────────────────────────────────────
 
 const renderSessionDetail = (session) => {
   document.getElementById('detail-placeholder').style.display = 'none';
@@ -229,14 +365,18 @@ const renderSessionDetail = (session) => {
     ? session.exercises.map(ex => buildExerciseCard(session.id, ex)).join('')
     : `<div class="empty-state"><p>No exercises logged yet.</p></div>`;
 
+  const ownerLine = currentRole === 'admin' && session.owner
+    ? `<div class="session-owner-badge">@${session.owner}</div>` : '';
+
   content.innerHTML = `
     <div class="detail-header">
       <div>
         <div class="session-title">${session.name}</div>
         <div class="session-date-badge">${formatDate(session.date)}</div>
+        ${ownerLine}
       </div>
       <div style="flex:1"></div>
-      <button class="btn-danger" onclick="removeSession(${session.id})">DELETE SESSION</button>
+      <button class="btn-danger" onclick="removeSession('${session.id}')">DELETE SESSION</button>
     </div>
     <div class="exercises-section">
       <h3>EXERCISES — ${session.exercises.length}</h3>
@@ -256,7 +396,7 @@ const renderSessionDetail = (session) => {
         <div id="sets-container"></div>
       </div>
       <div class="add-exercise-actions">
-        <button class="btn btn-primary" onclick="addExercise(${session.id})">LOG EXERCISE</button>
+        <button class="btn btn-primary" onclick="addExercise('${session.id}')">LOG EXERCISE</button>
         <button class="btn-ghost" onclick="resetNewSets()">RESET</button>
       </div>
     </div>
@@ -280,7 +420,7 @@ const buildExerciseCard = (sessionId, ex) => {
         <div class="ex-name">${ex.name}</div>
         <div class="badge-1rm">1RM ~${ex.best_1rm} LBS</div>
         <button class="btn-edit" onclick="toggleEdit(${ex.id})">EDIT</button>
-        <button class="btn-danger" onclick="removeExercise(${sessionId}, ${ex.id})">REMOVE</button>
+        <button class="btn-danger" onclick="removeExercise('${sessionId}', ${ex.id})">REMOVE</button>
       </div>
       <table class="sets-table">
         <thead><tr><th>SET</th><th>WEIGHT (LBS)</th><th>REPS</th><th>EST. 1RM</th></tr></thead>
@@ -293,7 +433,7 @@ const buildExerciseCard = (sessionId, ex) => {
         onclick="addSetRow('edit-rows-${ex.id}')">+ ADD SET</button>
         <div class="edit-actions">
           <button class="btn-save"
-                  onclick="saveExercise(${sessionId}, ${ex.id}, '${ex.name}')">SAVE CHANGES</button>
+                  onclick="saveExercise('${sessionId}', ${ex.id}, '${ex.name}')">SAVE CHANGES</button>
           <button class="btn-ghost" onclick="toggleEdit(${ex.id})">CANCEL</button>
         </div>
       </div>
@@ -301,38 +441,45 @@ const buildExerciseCard = (sessionId, ex) => {
   `;
 };
 
-// exercises
+// ── exercises ─────────────────────────────────────────────────────────────────
 
 const addExercise = async (sessionId) => {
   const nameInput = document.getElementById('ex-name');
-  const msgDiv = document.getElementById('ex-msg');
-
   if (!nameInput.value) { toast('Enter an exercise name.', 'error'); return; }
   const sets = getSets('sets-container');
   if (!sets.length) { toast('Add at least one valid set.', 'error'); return; }
 
-  await createExercise(sessionId, { name: nameInput.value.trim(), sets }).then(ex => {
+  try {
+    const ex = await createExercise(sessionId, { name: nameInput.value.trim(), sets });
     toast(`${ex.name} logged — est. 1RM: ${ex.best_1rm} lbs`);
     selectSession(sessionId);
-  });
+  } catch (err) {
+    if (err.message !== 'Unauthorized') toast('Failed to log exercise.', 'error');
+  }
 };
 
 const saveExercise = async (sessionId, exId, exName) => {
   const sets = getSets('edit-rows-' + exId);
   if (!sets.length) { toast('At least one valid set required.', 'error'); return; }
 
-  await updateExercise(sessionId, exId, { name: exName, sets }).then(ex => {
+  try {
+    const ex = await updateExercise(sessionId, exId, { name: exName, sets });
     toast(`${ex.name} updated — new 1RM: ${ex.best_1rm} lbs`);
     selectSession(sessionId);
-  });
+  } catch (err) {
+    if (err.message !== 'Unauthorized') toast('Failed to update exercise.', 'error');
+  }
 };
 
 const removeExercise = async (sessionId, exId) => {
   if (!confirm('Delete this exercise?')) return;
-  await deleteExercise(sessionId, exId).then(() => {
+  try {
+    await deleteExercise(sessionId, exId);
     toast('Exercise removed.');
     selectSession(sessionId);
-  });
+  } catch (err) {
+    if (err.message !== 'Unauthorized') toast('Failed to remove exercise.', 'error');
+  }
 };
 
 const toggleEdit = (exId) => {
@@ -350,7 +497,7 @@ const toggleEdit = (exId) => {
   }
 };
 
-// progress
+// ── progress ──────────────────────────────────────────────────────────────────
 
 const loadProgressPanel = () => {
   const allNames = [];
@@ -369,7 +516,7 @@ const loadProgressPanel = () => {
   }
 
   pills.innerHTML = '';
-  allNames.map(n => {
+  allNames.forEach(n => {
     pills.innerHTML += `
       <button class="ex-pill ${n === activeExercise ? 'active' : ''}"
               id="pill-${n}"
@@ -384,13 +531,15 @@ const loadProgressPanel = () => {
 
 const loadChart = async (exerciseName, btn) => {
   activeExercise = exerciseName;
-  const pills = document.getElementById('exercise-pills').getElementsByClassName('ex-pill');
-  for (let i = 0; i < pills.length; i++) {
-    pills[i].classList.remove('active');
-  }
+  document.querySelectorAll('.ex-pill').forEach(p => p.classList.remove('active'));
   if (btn) btn.classList.add('active');
 
-  await getProgress(exerciseName).then(history => renderChart(exerciseName, history));
+  try {
+    const history = await getProgress(exerciseName);
+    renderChart(exerciseName, history);
+  } catch (err) {
+    if (err.message !== 'Unauthorized') toast('Failed to load progress data.', 'error');
+  }
 };
 
 const renderChart = (exerciseName, history) => {
@@ -486,11 +635,88 @@ const renderChart = (exerciseName, history) => {
   });
 };
 
-// init
+// ── admin panel ───────────────────────────────────────────────────────────────
 
-(async () => {
-  await getSessions().then(data => {
-    sessions = data;
+const loadAdminPanel = async () => {
+  const wrap = document.getElementById('user-table-wrap');
+  wrap.innerHTML = '<p class="muted-text" style="font-family:\'JetBrains Mono\',monospace;font-size:0.8rem">Loading users…</p>';
+
+  try {
+    const users = await getUsers();
+    if (!users.length) { wrap.innerHTML = '<p class="muted-text">No users found.</p>'; return; }
+
+    wrap.innerHTML = `
+      <table class="admin-table">
+        <thead>
+          <tr><th>USERNAME</th><th>ROLE</th><th>ACTION</th></tr>
+        </thead>
+        <tbody>
+          ${users.map(u => `
+            <tr>
+              <td class="admin-username">${u.username}</td>
+              <td>
+                <span class="role-badge role-${u.role}">${u.role.toUpperCase()}</span>
+              </td>
+              <td>
+                ${u.username === currentUser ? '<span class="muted-text" style="font-size:0.7rem;font-family:\'JetBrains Mono\',monospace">YOU</span>' : `
+                  <button class="btn-ghost" style="font-size:0.75rem;padding:5px 12px"
+                    onclick="toggleRole('${u.username}', '${u.role}')">
+                    ${u.role === 'admin' ? 'DEMOTE' : 'PROMOTE'}
+                  </button>
+                `}
+              </td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    `;
+  } catch (err) {
+    if (err.message !== 'Unauthorized') wrap.innerHTML = '<p class="muted-text">Failed to load users.</p>';
+  }
+};
+
+const toggleRole = async (username, currentUserRole) => {
+  const newRole = currentUserRole === 'admin' ? 'user' : 'admin';
+  const verb = newRole === 'admin' ? 'promote' : 'demote';
+  if (!confirm(`${verb.toUpperCase()} @${username} to '${newRole}'?`)) return;
+
+  try {
+    const res = await setUserRole(username, newRole);
+    toast(res.message);
+    loadAdminPanel();
+  } catch (err) {
+    if (err.message !== 'Unauthorized') toast('Failed to update role.', 'error');
+  }
+};
+
+// ── init ──────────────────────────────────────────────────────────────────────
+
+async function initApp() {
+  renderHeaderUser();
+  try {
+    sessions = await getSessions();
     refreshSessions();
-  });
+  } catch (err) {
+    if (err.message !== 'Unauthorized') toast('Failed to load sessions.', 'error');
+  }
+}
+
+// On page load: if token exists try to use it, else show login
+(async () => {
+  if (authToken) {
+    try {
+      // Verify the token is still valid
+      const res = await fetch(`${AUTH_URL}/me`, { headers: authHeaders() });
+      if (!res.ok) { handleUnauthorized(); return; }
+      const me = await res.json();
+      // Refresh role in case it changed since last login
+      saveAuth(authToken, me.username, me.role);
+      hideAuthOverlay();
+      initApp();
+    } catch {
+      handleUnauthorized();
+    }
+  } else {
+    showAuthOverlay();
+  }
 })();

@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     DATABASE_URL: str
     SECRET_KEY: str
 
-    model_config = SettingsConfigDict(env_file=".env")
+    model_config = SettingsConfigDict(env_file="../.env")
 
 
 @lru_cache
@@ -21,7 +21,7 @@ def get_settings():
 
 
 async def initialize_database():
-    from models import Session, User  # local import avoids circular deps
+    from models import Session, User
 
     settings = get_settings()
     client = AsyncMongoClient(settings.DATABASE_URL)

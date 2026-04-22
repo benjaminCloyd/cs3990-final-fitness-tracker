@@ -1,4 +1,4 @@
-from backend.auth.jwt_handler import TokenData, verify_access_token
+from auth.jwt_handler import TokenData, verify_access_token
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 

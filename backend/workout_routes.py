@@ -21,11 +21,13 @@ def session_to_dict(s: Session) -> dict:
         "id": str(s.id),
         "name": s.name,
         "date": s.date,
+        "owner": s.owner,
         "exercises": [ex.model_dump() for ex in s.exercises],
     }
 
 
-async def get_session_or_404(session_id: str) -> Session:
+async def get_session_or_404(session_id: str, user: TokenData) -> Session:
+    """Fetch a session by ID and enforce ownership (admins bypass)."""
     try:
         oid = PydanticObjectId(session_id)
     except Exception:
@@ -33,7 +35,22 @@ async def get_session_or_404(session_id: str) -> Session:
     session = await session_database.get(oid)
     if not session:
         raise HTTPException(status_code=404, detail=f"Session {session_id} not found.")
+    if user.role != "admin" and session.owner != user.username:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have access to this session.",
+        )
     return session
+
+
+def _sort_sessions(sessions: list[Session]) -> list[Session]:
+    def key(s: Session):
+        try:
+            m, d, y = s.date.split("/")
+            return (int(y), int(m), int(d))
+        except Exception:
+            return (0, 0, 0)
+    return sorted(sessions, key=key, reverse=True)
 
 
 # ── sessions ──────────────────────────────────────────────────────────────────
@@ -41,24 +58,18 @@ async def get_session_or_404(session_id: str) -> Session:
 
 @workout_router.get("")
 async def get_all_sessions(user: TokenData = Depends(authenticate)) -> list:
-    sessions = await session_database.get_all()
-
-    def sort_key(s: Session):
-        try:
-            m, d, y = s.date.split("/")
-            return (int(y), int(m), int(d))
-        except Exception:
-            return (0, 0, 0)
-
-    sessions.sort(key=sort_key, reverse=True)
-    return [session_to_dict(s) for s in sessions]
+    if user.role == "admin":
+        sessions = await session_database.get_all()
+    else:
+        sessions = await Session.find(Session.owner == user.username).to_list()
+    return [session_to_dict(s) for s in _sort_sessions(sessions)]
 
 
 @workout_router.post("", status_code=201)
 async def create_session(
     body: SessionRequest, user: TokenData = Depends(authenticate)
 ) -> dict:
-    session = Session(name=body.name, date=body.date, exercises=[])
+    session = Session(name=body.name, date=body.date, exercises=[], owner=user.username)
     await session_database.save(session)
     return session_to_dict(session)
 
@@ -67,7 +78,11 @@ async def create_session(
 async def get_progress(
     exercise_name: str, user: TokenData = Depends(authenticate)
 ) -> list:
-    sessions = await session_database.get_all()
+    if user.role == "admin":
+        sessions = await session_database.get_all()
+    else:
+        sessions = await Session.find(Session.owner == user.username).to_list()
+
     history = []
     for s in sessions:
         for ex in s.exercises:
@@ -88,14 +103,14 @@ async def get_progress(
 
 @workout_router.get("/{session_id}")
 async def get_session(session_id: str, user: TokenData = Depends(authenticate)) -> dict:
-    return session_to_dict(await get_session_or_404(session_id))
+    return session_to_dict(await get_session_or_404(session_id, user))
 
 
 @workout_router.delete("/{session_id}")
 async def delete_session(
     session_id: str, user: TokenData = Depends(authenticate)
 ) -> dict:
-    session = await get_session_or_404(session_id)
+    session = await get_session_or_404(session_id, user)
     await session_database.delete(session.id)
     return {"msg": f"Session '{session.name}' deleted."}
 
@@ -107,7 +122,7 @@ async def delete_session(
 async def add_exercise(
     session_id: str, body: ExerciseRequest, user: TokenData = Depends(authenticate)
 ) -> dict:
-    session = await get_session_or_404(session_id)
+    session = await get_session_or_404(session_id, user)
     next_id = max((ex.id for ex in session.exercises), default=0) + 1
     sets = [{"weight": s.weight, "reps": s.reps} for s in body.sets]
     best = round(max(epley_1rm(s["weight"], s["reps"]) for s in sets), 1)
@@ -126,7 +141,7 @@ async def update_exercise(
     body: ExerciseRequest,
     user: TokenData = Depends(authenticate),
 ) -> dict:
-    session = await get_session_or_404(session_id)
+    session = await get_session_or_404(session_id, user)
     for ex in session.exercises:
         if ex.id == exercise_id:
             ex.name = body.name.strip().title()
@@ -143,7 +158,7 @@ async def delete_exercise(
     exercise_id: int,
     user: TokenData = Depends(authenticate),
 ) -> dict:
-    session = await get_session_or_404(session_id)
+    session = await get_session_or_404(session_id, user)
     for i, ex in enumerate(session.exercises):
         if ex.id == exercise_id:
             session.exercises.pop(i)
