@@ -1,23 +1,18 @@
-from functools import lru_cache
 import json
+from functools import lru_cache
 from typing import Any
 
-from beanie import init_beanie, PydanticObjectId
-from pydantic_settings import BaseSettings, SettingsConfigDict
-from models.events import Event
-from models.users import User
-from pymongo import AsyncMongoClient
+from beanie import PydanticObjectId, init_beanie
 from pydantic import BaseModel
-import logging
-
-logger = logging.getLogger(__name__)
+from pydantic_settings import BaseSettings, SettingsConfigDict
+from pymongo import AsyncMongoClient
 
 
 class Settings(BaseSettings):
     DATABASE_URL: str
     SECRET_KEY: str
 
-    model_config = SettingsConfigDict(env_file="../env")
+    model_config = SettingsConfigDict(env_file=".env")
 
 
 @lru_cache
@@ -26,12 +21,13 @@ def get_settings():
 
 
 async def initialize_database():
-    logger.info("Connecting to the database...")
+    from models import Session, User  # local import avoids circular deps
+
     settings = get_settings()
-    # modern way vs using motor.motor_asyncio.AsyncIOMotorClient
     client = AsyncMongoClient(settings.DATABASE_URL)
     await init_beanie(
-        database=client.get_default_database(), document_models=[Event, User]
+        database=client.get_default_database(),
+        document_models=[Session, User],
     )
 
 
@@ -45,19 +41,14 @@ class Database:
 
     async def get(self, id: PydanticObjectId) -> Any:
         doc = await self.model.get(id)
-        if doc:
-            return doc
-        return False
+        return doc if doc else False
 
     async def get_all(self) -> list[Any]:
-        docs = await self.model.find_all().to_list()
-        return docs
+        return await self.model.find_all().to_list()
 
     async def update(self, id: PydanticObjectId, body: BaseModel) -> Any:
-        doc_id = id
-        des_body = body.model_dump_json(exclude_defaults=True)
-        des_body = json.loads(des_body)
-        doc = await self.get(doc_id)
+        des_body = json.loads(body.model_dump_json(exclude_defaults=True))
+        doc = await self.get(id)
         if not doc:
             return False
         await doc.set(des_body)

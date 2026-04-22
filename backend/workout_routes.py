@@ -1,0 +1,152 @@
+from auth.authenticate import authenticate
+from auth.jwt_handler import TokenData
+from beanie import PydanticObjectId
+from database.connection import Database
+from fastapi import APIRouter, Depends, HTTPException, status
+from models import Exercise, ExerciseRequest, Session, SessionRequest
+
+workout_router = APIRouter()
+session_database = Database(Session)
+
+
+# ── helpers ───────────────────────────────────────────────────────────────────
+
+
+def epley_1rm(weight: float, reps: int) -> float:
+    return float(weight) if reps == 1 else weight * (1 + reps / 30)
+
+
+def session_to_dict(s: Session) -> dict:
+    return {
+        "id": str(s.id),
+        "name": s.name,
+        "date": s.date,
+        "exercises": [ex.model_dump() for ex in s.exercises],
+    }
+
+
+async def get_session_or_404(session_id: str) -> Session:
+    try:
+        oid = PydanticObjectId(session_id)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid session ID format.")
+    session = await session_database.get(oid)
+    if not session:
+        raise HTTPException(status_code=404, detail=f"Session {session_id} not found.")
+    return session
+
+
+# ── sessions ──────────────────────────────────────────────────────────────────
+
+
+@workout_router.get("")
+async def get_all_sessions(user: TokenData = Depends(authenticate)) -> list:
+    sessions = await session_database.get_all()
+
+    def sort_key(s: Session):
+        try:
+            m, d, y = s.date.split("/")
+            return (int(y), int(m), int(d))
+        except Exception:
+            return (0, 0, 0)
+
+    sessions.sort(key=sort_key, reverse=True)
+    return [session_to_dict(s) for s in sessions]
+
+
+@workout_router.post("", status_code=201)
+async def create_session(
+    body: SessionRequest, user: TokenData = Depends(authenticate)
+) -> dict:
+    session = Session(name=body.name, date=body.date, exercises=[])
+    await session_database.save(session)
+    return session_to_dict(session)
+
+
+@workout_router.get("/progress/{exercise_name}")
+async def get_progress(
+    exercise_name: str, user: TokenData = Depends(authenticate)
+) -> list:
+    sessions = await session_database.get_all()
+    history = []
+    for s in sessions:
+        for ex in s.exercises:
+            if ex.name.lower() == exercise_name.lower():
+                history.append(
+                    {"date": s.date, "session_name": s.name, "best_1rm": ex.best_1rm}
+                )
+
+    def sort_key(x):
+        try:
+            m, d, y = x["date"].split("/")
+            return (int(y), int(m), int(d))
+        except Exception:
+            return (0, 0, 0)
+
+    return sorted(history, key=sort_key)
+
+
+@workout_router.get("/{session_id}")
+async def get_session(session_id: str, user: TokenData = Depends(authenticate)) -> dict:
+    return session_to_dict(await get_session_or_404(session_id))
+
+
+@workout_router.delete("/{session_id}")
+async def delete_session(
+    session_id: str, user: TokenData = Depends(authenticate)
+) -> dict:
+    session = await get_session_or_404(session_id)
+    await session_database.delete(session.id)
+    return {"msg": f"Session '{session.name}' deleted."}
+
+
+# ── exercises ─────────────────────────────────────────────────────────────────
+
+
+@workout_router.post("/{session_id}/exercises", status_code=201)
+async def add_exercise(
+    session_id: str, body: ExerciseRequest, user: TokenData = Depends(authenticate)
+) -> dict:
+    session = await get_session_or_404(session_id)
+    next_id = max((ex.id for ex in session.exercises), default=0) + 1
+    sets = [{"weight": s.weight, "reps": s.reps} for s in body.sets]
+    best = round(max(epley_1rm(s["weight"], s["reps"]) for s in sets), 1)
+    exercise = Exercise(
+        id=next_id, name=body.name.strip().title(), sets=body.sets, best_1rm=best
+    )
+    session.exercises.append(exercise)
+    await session.save()
+    return exercise.model_dump()
+
+
+@workout_router.put("/{session_id}/exercises/{exercise_id}")
+async def update_exercise(
+    session_id: str,
+    exercise_id: int,
+    body: ExerciseRequest,
+    user: TokenData = Depends(authenticate),
+) -> dict:
+    session = await get_session_or_404(session_id)
+    for ex in session.exercises:
+        if ex.id == exercise_id:
+            ex.name = body.name.strip().title()
+            ex.sets = body.sets
+            ex.best_1rm = round(max(epley_1rm(s.weight, s.reps) for s in body.sets), 1)
+            await session.save()
+            return ex.model_dump()
+    raise HTTPException(status_code=404, detail=f"Exercise {exercise_id} not found.")
+
+
+@workout_router.delete("/{session_id}/exercises/{exercise_id}")
+async def delete_exercise(
+    session_id: str,
+    exercise_id: int,
+    user: TokenData = Depends(authenticate),
+) -> dict:
+    session = await get_session_or_404(session_id)
+    for i, ex in enumerate(session.exercises):
+        if ex.id == exercise_id:
+            session.exercises.pop(i)
+            await session.save()
+            return {"msg": f"Exercise '{ex.name}' deleted."}
+    raise HTTPException(status_code=404, detail=f"Exercise {exercise_id} not found.")

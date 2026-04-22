@@ -1,0 +1,7 @@
+bcrypt
+beanie
+fastapi
+pydantic-settings
+PyJWT
+python-multipart
+uvicorn
