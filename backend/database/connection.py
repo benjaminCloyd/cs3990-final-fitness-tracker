@@ -18,7 +18,11 @@ class Settings(BaseSettings):
     """
     DATABASE_URL: str
     SECRET_KEY: str
+<<<<<<< HEAD
     USDA_API_KEY: str = "DEMO_KEY"
+=======
+    USDA_API_KEY: str = "place real here"
+>>>>>>> a345c01e15bbe8e492da3896b9ec56e5471a6eb4
 
     model_config = SettingsConfigDict(env_file="../.env")
 
