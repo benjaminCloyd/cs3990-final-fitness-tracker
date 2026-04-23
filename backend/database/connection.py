@@ -11,6 +11,7 @@ from pymongo import AsyncMongoClient
 class Settings(BaseSettings):
     DATABASE_URL: str
     SECRET_KEY: str
+    USDA_API_KEY: str = "i2EQ0bKuE18kaXn0oqdZqWMBwcMajico0Yd0EYG8"
 
     model_config = SettingsConfigDict(env_file="../.env")
 
@@ -21,13 +22,13 @@ def get_settings():
 
 
 async def initialize_database():
-    from models import Session, User
+    from models import GroceryList, MealPlan, Recipe, Session, User, WorkoutTemplate
 
     settings = get_settings()
     client = AsyncMongoClient(settings.DATABASE_URL)
     await init_beanie(
         database=client.get_default_database(),
-        document_models=[Session, User],
+        document_models=[Session, User, Recipe, MealPlan, GroceryList, WorkoutTemplate],
     )
 
 

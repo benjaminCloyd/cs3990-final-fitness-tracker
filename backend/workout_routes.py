@@ -3,7 +3,8 @@ from auth.jwt_handler import TokenData
 from beanie import PydanticObjectId
 from database.connection import Database
 from fastapi import APIRouter, Depends, HTTPException, status
-from models import Exercise, ExerciseRequest, Session, SessionRequest
+from models import Exercise, ExerciseRequest, Session, SessionRequest, User, WorkoutTemplate, TemplateRequest
+from logger import log_event
 
 workout_router = APIRouter()
 session_database = Database(Session)
@@ -71,6 +72,7 @@ async def create_session(
 ) -> dict:
     session = Session(name=body.name, date=body.date, exercises=[], owner=user.username)
     await session_database.save(session)
+    log_event("Workout Created", f"User {user.username} started session '{session.name}'")
     return session_to_dict(session)
 
 
@@ -101,6 +103,33 @@ async def get_progress(
     return sorted(history, key=sort_key)
 
 
+@workout_router.get("/relative-strength")
+async def get_relative_strength(user: TokenData = Depends(authenticate)):
+    db_user = await User.find_one(User.username == user.username)
+    if not db_user or db_user.weight <= 0:
+        raise HTTPException(status_code=400, detail="User weight must be set in profile.")
+    
+    # Get best 1RM for main lifts (Big 3)
+    main_lifts = ["Bench Press", "Squat", "Deadlift"]
+    sessions = await Session.find(Session.owner == user.username).to_list()
+    
+    bests = {lift: 0.0 for lift in main_lifts}
+    for s in sessions:
+        for ex in s.exercises:
+            if ex.name.title() in main_lifts:
+                bests[ex.name.title()] = max(bests[ex.name.title()], ex.best_1rm)
+                
+    total_1rm = sum(bests.values())
+    ratio = total_1rm / db_user.weight
+    
+    return {
+        "weight_kg": db_user.weight,
+        "total_1rm_lbs": total_1rm,
+        "strength_ratio": round(ratio, 2),
+        "bests": bests
+    }
+
+
 @workout_router.get("/{session_id}")
 async def get_session(session_id: str, user: TokenData = Depends(authenticate)) -> dict:
     return session_to_dict(await get_session_or_404(session_id, user))
@@ -112,6 +141,7 @@ async def delete_session(
 ) -> dict:
     session = await get_session_or_404(session_id, user)
     await session_database.delete(session.id)
+    log_event("Workout Deleted", f"User {user.username} deleted session '{session.name}'")
     return {"msg": f"Session '{session.name}' deleted."}
 
 
@@ -165,3 +195,31 @@ async def delete_exercise(
             await session.save()
             return {"msg": f"Exercise '{ex.name}' deleted."}
     raise HTTPException(status_code=404, detail=f"Exercise {exercise_id} not found.")
+
+
+# ── templates ─────────────────────────────────────────────────────────────────
+
+
+@workout_router.get("/templates/all", response_model=list[WorkoutTemplate])
+async def list_templates(user: TokenData = Depends(authenticate)):
+    return await WorkoutTemplate.find(WorkoutTemplate.owner == user.username).to_list()
+
+
+@workout_router.post("/templates", status_code=201)
+async def create_template(body: TemplateRequest, user: TokenData = Depends(authenticate)):
+    template = WorkoutTemplate(name=body.name, exercises=body.exercises, owner=user.username)
+    await template.create()
+    return template
+
+
+@workout_router.delete("/templates/{template_id}")
+async def delete_template(template_id: str, user: TokenData = Depends(authenticate)):
+    try:
+        oid = PydanticObjectId(template_id)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid ID.")
+    template = await WorkoutTemplate.get(oid)
+    if not template or template.owner != user.username:
+        raise HTTPException(status_code=404, detail="Template not found.")
+    await template.delete()
+    return {"message": "Template deleted"}

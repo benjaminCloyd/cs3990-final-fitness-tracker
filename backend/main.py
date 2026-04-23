@@ -6,10 +6,13 @@ from fastapi import FastAPI
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
+from recipe_routes import recipe_router
 from user_routes import user_router
 from workout_routes import workout_router
 
 STATIC_DIR = Path(__file__).parent / "static"
+UPLOADS_DIR = Path(__file__).parent / "uploads"
+UPLOADS_DIR.mkdir(exist_ok=True)
 
 
 @asynccontextmanager
@@ -24,15 +27,9 @@ app = FastAPI(title="IRONLOG", lifespan=lifespan)
 
 app.include_router(user_router,    prefix="/auth",     tags=["Auth"])
 app.include_router(workout_router, prefix="/sessions", tags=["Workouts"])
+app.include_router(recipe_router,  prefix="/recipes",  tags=["Recipes & Nutrition"])
 
 
 # ── React SPA static files ────────────────────────────────────────────────────
 
-if STATIC_DIR.exists():
-    # Serve JS/CSS/assets normally
-    app.mount("/assets", StaticFiles(directory=STATIC_DIR / "assets"), name="assets")
-
-    @app.get("/{full_path:path}", include_in_schema=False)
-    async def spa_fallback(full_path: str):
-        """Return index.html for any path the React router handles."""
-        return FileResponse(STATIC_DIR / "index.html")
+app.mount("/uploads", StaticFiles(directory=UPLOADS_DIR), name="uploads")
