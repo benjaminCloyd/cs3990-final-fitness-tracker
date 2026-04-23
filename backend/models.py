@@ -7,11 +7,13 @@ from typing import List, Optional
 
 
 class SetEntry(BaseModel):
+    """A single set within an exercise."""
     weight: float
     reps: int
 
 
 class Exercise(BaseModel):
+    """A logged exercise with multiple sets and a calculated best 1RM."""
     id: int
     name: str
     sets: List[SetEntry]
@@ -19,6 +21,7 @@ class Exercise(BaseModel):
 
 
 class Ingredient(BaseModel):
+    """An ingredient entry for a recipe, including nutritional info."""
     name: str
     quantity: str
     calories: float = 0.0
@@ -28,6 +31,7 @@ class Ingredient(BaseModel):
 
 
 class MacroTargets(BaseModel):
+    """User-defined daily nutritional goals."""
     calories: float = 2000.0
     protein: float = 150.0
     carbs: float = 250.0
@@ -38,22 +42,25 @@ class MacroTargets(BaseModel):
 
 
 class ExerciseRequest(BaseModel):
+    """Schema for adding/updating an exercise."""
     name: str
     sets: List[SetEntry]
 
 
 class SessionRequest(BaseModel):
+    """Schema for creating a new workout session."""
     name: str
     date: str
 
 
 class SignupRequest(BaseModel):
-    """Used for signup so callers cannot self-assign an admin role."""
+    """Schema for user registration."""
     username: str
     password: str
 
 
 class RecipeRequest(BaseModel):
+    """Schema for creating or editing a recipe."""
     name: str
     ingredients: List[Ingredient]
     instructions: str = ""
@@ -61,18 +68,21 @@ class RecipeRequest(BaseModel):
 
 
 class MealPlanRequest(BaseModel):
+    """Schema for building a weekly meal plan."""
     week_start_date: str
     # Map of "Monday_Breakfast": recipe_id, etc.
     slots: dict[str, str]
 
 
 class UserUpdateRequest(BaseModel):
+    """Schema for updating user profile metrics."""
     height: Optional[float] = None
     weight: Optional[float] = None
     macro_targets: Optional[MacroTargets] = None
 
 
 class TemplateRequest(BaseModel):
+    """Schema for creating a workout template."""
     name: str
     exercises: List[ExerciseRequest]
 
@@ -81,6 +91,7 @@ class TemplateRequest(BaseModel):
 
 
 class Session(Document):
+    """Database model for a workout session."""
     name: str
     date: str
     exercises: List[Exercise] = []
@@ -91,8 +102,9 @@ class Session(Document):
 
 
 class WorkoutTemplate(Document):
+    """Database model for reusable workout structures."""
     name: str
-    exercises: List[ExerciseRequest] # Template exercises don't have 1RM yet
+    exercises: List[ExerciseRequest]
     owner: str
 
     class Settings:
@@ -100,6 +112,7 @@ class WorkoutTemplate(Document):
 
 
 class User(Document):
+    """Database model for user accounts and profiles."""
     username: str
     password: str            # bcrypt hashed
     role: str = "user"       # "user" | "admin"
@@ -113,6 +126,7 @@ class User(Document):
 
 
 class Recipe(Document):
+    """Database model for saved recipes."""
     name: str
     ingredients: List[Ingredient]
     instructions: str = ""
@@ -128,6 +142,7 @@ class Recipe(Document):
 
 
 class MealPlan(Document):
+    """Database model for weekly nutritional planning."""
     week_start_date: str     # MM/DD/YYYY
     owner: str               # username
     # Map of "Day_Slot": recipe_id
@@ -138,6 +153,7 @@ class MealPlan(Document):
 
 
 class GroceryList(Document):
+    """Database model for generated grocery lists."""
     owner: str
     items: List[Ingredient]
     is_checked: List[bool] = []
@@ -150,6 +166,7 @@ class GroceryList(Document):
 
 
 class TokenResponse(BaseModel):
+    """Response containing identity and access token."""
     username: str
     role: str
     access_token: str
@@ -157,6 +174,7 @@ class TokenResponse(BaseModel):
 
 
 class UserResponse(BaseModel):
+    """Sanitized user profile response."""
     username: str
     role: str
     height: float

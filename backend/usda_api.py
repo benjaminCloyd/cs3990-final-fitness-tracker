@@ -1,12 +1,19 @@
 import httpx
 from database.connection import get_settings
 
+# ── configuration ─────────────────────────────────────────────────────────────
+
 SETTINGS = get_settings()
 BASE_URL = "https://api.nal.usda.gov/fdc/v1"
 
+
+# ── core logic ────────────────────────────────────────────────────────────────
+
+
 async def search_food_nutrients(query: str):
     """
-    Search for a food item and return its nutrient breakdown per 100g.
+    Search the USDA FoodData Central API for a food item and extract 
+    macronutrient data per 100g.
     """
     params = {
         "api_key": SETTINGS.USDA_API_KEY,
@@ -24,6 +31,7 @@ async def search_food_nutrients(query: str):
         if not data.get("foods"):
             return None
         
+        # Take the most relevant match
         food = data["foods"][0]
         nutrients = {
             "calories": 0.0,
@@ -32,7 +40,11 @@ async def search_food_nutrients(query: str):
             "fat": 0.0
         }
         
-        # Nutrient IDs mapping
+        # USDA Nutrient ID Mapping Table
+        # 1008: Energy (kcal)
+        # 1003: Protein (g)
+        # 1005: Carbohydrate (g)
+        # 1004: Total lipid (fat) (g)
         mapping = {
             1008: "calories",
             1003: "protein",
