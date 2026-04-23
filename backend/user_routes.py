@@ -24,7 +24,7 @@ def require_admin(user: TokenData):
 
 
 def user_to_response(u: User) -> UserResponse:
-    """Map a User document to a sanitized UserResponse model."""
+    """Map a User document to a sanitized(don't give password) UserResponse model."""
     return UserResponse(
         username=u.username,
         role=u.role,

@@ -174,7 +174,7 @@ class TokenResponse(BaseModel):
 
 
 class UserResponse(BaseModel):
-    """Sanitized user profile response."""
+    """Sanitized(don't give password) user profile response."""
     username: str
     role: str
     height: float
