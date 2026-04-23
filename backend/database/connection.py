@@ -11,7 +11,7 @@ from pymongo import AsyncMongoClient
 class Settings(BaseSettings):
     DATABASE_URL: str
     SECRET_KEY: str
-    USDA_API_KEY: str = "i2EQ0bKuE18kaXn0oqdZqWMBwcMajico0Yd0EYG8"
+    USDA_API_KEY: str = "place real here"
 
     model_config = SettingsConfigDict(env_file="../.env")
 
