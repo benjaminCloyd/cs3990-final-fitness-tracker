@@ -1,6 +1,7 @@
 bcrypt
 beanie
 fastapi
+httpx
 pydantic-settings
 PyJWT
 python-multipart
