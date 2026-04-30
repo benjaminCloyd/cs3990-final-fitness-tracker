@@ -1,18 +1,19 @@
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from database.connection import initialize_database
+from backend.database.connection import initialize_database
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
-from recipe_routes import recipe_router
-from user_routes import user_router
-from workout_routes import workout_router
+from backend.recipe_routes import recipe_router
+from backend.user_routes import user_router
+from backend.workout_routes import workout_router
 
 # ── configuration ─────────────────────────────────────────────────────────────
 
 UPLOADS_DIR = Path(__file__).parent / "uploads"
 UPLOADS_DIR.mkdir(exist_ok=True)
+STATIC_DIR = Path(__file__).parent / "static"
 
 
 @asynccontextmanager
@@ -36,3 +37,7 @@ app.include_router(recipe_router,  prefix="/recipes",  tags=["Recipes & Nutritio
 
 # Mount the recipe image uploads directory to serve images to the frontend
 app.mount("/uploads", StaticFiles(directory=UPLOADS_DIR), name="uploads")
+
+# Serve the frontend built files
+if STATIC_DIR.exists():
+    app.mount("/", StaticFiles(directory=STATIC_DIR, html=True), name="static")

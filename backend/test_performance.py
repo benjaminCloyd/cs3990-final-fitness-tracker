@@ -8,7 +8,7 @@ from httpx import AsyncClient, ASGITransport
 from main import app
 from beanie import init_beanie
 from pymongo import AsyncMongoClient
-from models import User, Session, Recipe, WorkoutTemplate, MealPlan, GroceryList
+from backend.models import User, Session, Recipe, WorkoutTemplate, MealPlan, GroceryList
 
 @pytest.fixture(scope="function")
 async def client():

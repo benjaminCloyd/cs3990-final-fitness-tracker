@@ -3,17 +3,17 @@ import uuid
 from pathlib import Path
 from typing import List, Optional
 
-from auth.authenticate import authenticate
-from auth.jwt_handler import TokenData
+from backend.auth.authenticate import authenticate
+from backend.auth.jwt_handler import TokenData
 from beanie import PydanticObjectId
 # depends so don't have to rewrite authenication logic every time
 from fastapi import APIRouter, Depends, HTTPException, File, UploadFile, status
 from fastapi.responses import FileResponse
 # allows for async tasks
 from starlette.background import BackgroundTask
-from models import Recipe, RecipeRequest, MealPlan, MealPlanRequest, GroceryList, Ingredient, User
-from usda_api import search_food_nutrients
-from logger import log_event
+from backend.models import Recipe, RecipeRequest, MealPlan, MealPlanRequest, GroceryList, Ingredient, User
+from backend.usda_api import search_food_nutrients
+from backend.logger import log_event
 
 # ── configuration ─────────────────────────────────────────────────────────────
 

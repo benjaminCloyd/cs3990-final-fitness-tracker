@@ -6,7 +6,7 @@ import pytest
 from beanie import init_beanie
 from pymongo import AsyncMongoClient
 from models import User, Session, Recipe, WorkoutTemplate, MealPlan, GroceryList
-from database.connection import Database
+from backend.database.connection import Database
 
 @pytest.fixture(scope="function")
 async def db_setup():

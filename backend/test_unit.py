@@ -3,10 +3,10 @@ UNIT TESTS: Low-level tests for individual functions and logic.
 Verifies password hashing, JWT token handling, and data model mapping.
 """
 import pytest
-from auth.hash_password import hash_password, verify_password
-from auth.jwt_handler import create_access_token, verify_access_token, TokenData
-from user_routes import user_to_response
-from models import User, MacroTargets
+from backend.auth.hash_password import hash_password, verify_password
+from backend.auth.jwt_handler import create_access_token, verify_access_token, TokenData
+from backend.user_routes import user_to_response
+from backend.models import User, MacroTargets
 from datetime import datetime, timedelta, timezone
 from beanie import init_beanie
 from pymongo import AsyncMongoClient

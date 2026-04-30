@@ -1,5 +1,5 @@
 import httpx
-from database.connection import get_settings
+from backend.database.connection import get_settings
 
 # ── configuration ─────────────────────────────────────────────────────────────
 

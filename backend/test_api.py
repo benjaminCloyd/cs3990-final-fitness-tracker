@@ -2,7 +2,7 @@ import asyncio
 import pytest
 from beanie import init_beanie
 from pymongo import AsyncMongoClient
-from models import User, Session, Recipe, Exercise, SetEntry, Ingredient, WorkoutTemplate, MealPlan, GroceryList
+from backend.models import User, Session, Recipe, Exercise, SetEntry, Ingredient, WorkoutTemplate, MealPlan, GroceryList
 
 # Simplified Direct Model Test
 @pytest.mark.asyncio

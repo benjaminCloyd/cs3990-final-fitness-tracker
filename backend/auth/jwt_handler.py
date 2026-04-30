@@ -4,7 +4,7 @@ import jwt
 from fastapi import HTTPException, status
 from pydantic import BaseModel
 
-from database.connection import get_settings
+from backend.database.connection import get_settings
 
 ALGORITHM = "HS256"
 

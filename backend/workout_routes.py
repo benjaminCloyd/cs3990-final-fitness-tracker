@@ -1,10 +1,10 @@
-from auth.authenticate import authenticate
-from auth.jwt_handler import TokenData
+from backend.auth.authenticate import authenticate
+from backend.auth.jwt_handler import TokenData
 from beanie import PydanticObjectId
-from database.connection import Database
+from backend.database.connection import Database
 from fastapi import APIRouter, Depends, HTTPException, status
-from models import Exercise, ExerciseRequest, Session, SessionRequest, User, WorkoutTemplate, TemplateRequest
-from logger import log_event
+from backend.models import Exercise, ExerciseRequest, Session, SessionRequest, User, WorkoutTemplate, TemplateRequest
+from backend.logger import log_event
 
 workout_router = APIRouter()
 session_database = Database(Session)

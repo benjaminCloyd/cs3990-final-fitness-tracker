@@ -8,11 +8,8 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from pymongo import AsyncMongoClient
 
 
-from pathlib import Path
-
 # ── environment settings ──────────────────────────────────────────────────────
 
-env_path = Path(__file__).parent.parent / ".env"
 
 class Settings(BaseSettings):
     """
@@ -23,7 +20,7 @@ class Settings(BaseSettings):
     SECRET_KEY: str
     USDA_API_KEY: str = "DEMO_KEY"
 
-    model_config = SettingsConfigDict(env_file=env_path)
+    model_config = SettingsConfigDict(env_file=".env")
 
 
 @lru_cache
@@ -40,7 +37,7 @@ async def initialize_database():
     Establish a connection to MongoDB and initialize the Beanie ODM 
     with the application's document models.
     """
-    from models import GroceryList, MealPlan, Recipe, Session, User, WorkoutTemplate
+    from backend.models import GroceryList, MealPlan, Recipe, Session, User, WorkoutTemplate
 
     settings = get_settings()
     client = AsyncMongoClient(settings.DATABASE_URL)

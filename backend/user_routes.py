@@ -1,11 +1,11 @@
-from auth.authenticate import authenticate
-from auth.hash_password import hash_password, verify_password
-from auth.jwt_handler import TokenData, create_access_token
-from database.connection import Database
+from backend.auth.authenticate import authenticate
+from backend.auth.hash_password import hash_password, verify_password
+from backend.auth.jwt_handler import TokenData, create_access_token
+from backend.database.connection import Database
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
-from models import SignupRequest, TokenResponse, User, UserResponse, UserUpdateRequest
-from logger import log_event, get_recent_logs
+from backend.models import SignupRequest, TokenResponse, User, UserResponse, UserUpdateRequest
+from backend.logger import log_event, get_recent_logs
 
 user_router = APIRouter()
 user_database = Database(User)
