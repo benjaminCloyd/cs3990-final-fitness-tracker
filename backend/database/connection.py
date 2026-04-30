@@ -8,8 +8,11 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from pymongo import AsyncMongoClient
 
 
+from pathlib import Path
+
 # ── environment settings ──────────────────────────────────────────────────────
 
+env_path = Path(__file__).parent.parent / ".env"
 
 class Settings(BaseSettings):
     """
@@ -20,7 +23,7 @@ class Settings(BaseSettings):
     SECRET_KEY: str
     USDA_API_KEY: str = "DEMO_KEY"
 
-    model_config = SettingsConfigDict(env_file="backend/.env")
+    model_config = SettingsConfigDict(env_file=env_path)
 
 
 @lru_cache
