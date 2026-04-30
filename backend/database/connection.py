@@ -83,8 +83,10 @@ class Database:
         await doc.set(des_body)
         return doc
 
-    async def delete(self, id: PydanticObjectId) -> bool:
+    async def delete(self, id: PydanticObjectId | None) -> bool:
         """Permanently remove a document from the database."""
+        if id is None:
+            return False
         doc = await self.get(id)
         if not doc:
             return False
