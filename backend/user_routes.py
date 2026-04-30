@@ -41,7 +41,7 @@ def user_to_response(u: User) -> UserResponse:
 @user_router.post("/signup")
 async def sign_user_up(body: SignupRequest) -> dict:
     """Register a new standard user with hashed credentials."""
-    existing = await User.find_one(User.username == body.username)
+    existing = await User.find_one({"username": body.username})
     if existing:
         log_event("Signup Failed", f"Username {body.username} already taken")
         raise HTTPException(
@@ -62,7 +62,7 @@ async def sign_user_in(
     form_data: OAuth2PasswordRequestForm = Depends(),
 ) -> TokenResponse:
     """Authenticate user credentials and return a JWT access token."""
-    db_user = await User.find_one(User.username == form_data.username)
+    db_user = await User.find_one({"username": form_data.username})
     if not db_user or not verify_password(form_data.password, db_user.password):
         log_event("Login Failed", f"Invalid credentials for {form_data.username}")
         raise HTTPException(
@@ -93,7 +93,7 @@ async def sign_user_in(
 @user_router.get("/me", response_model=UserResponse)
 async def get_me(user: TokenData = Depends(authenticate)) -> UserResponse:
     """Return the currently authenticated user's profile data."""
-    db_user = await User.find_one(User.username == user.username)
+    db_user = await User.find_one({"username": user.username})
     if not db_user:
         raise HTTPException(status_code=404, detail="User not found.")
     return user_to_response(db_user)
@@ -104,7 +104,7 @@ async def update_user_profile(
     body: UserUpdateRequest, user: TokenData = Depends(authenticate)
 ) -> UserResponse:
     """Update user physical metrics and nutritional goals."""
-    db_user = await User.find_one(User.username == user.username)
+    db_user = await User.find_one({"username": user.username})
     if not db_user:
         raise HTTPException(status_code=404, detail="User not found.")
 
@@ -144,7 +144,7 @@ async def set_user_role(
     if role not in ("user", "admin"):
         raise HTTPException(status_code=400, detail="Role must be 'user' or 'admin'.")
     
-    target = await User.find_one(User.username == username)
+    target = await User.find_one({"username": username})
     if not target:
         raise HTTPException(status_code=404, detail="User not found.")
     
@@ -163,7 +163,7 @@ async def deactivate_user(
 ) -> dict:
     """Soft-delete an account by deactivating it (Admin only)."""
     require_admin(user)
-    target = await User.find_one(User.username == username)
+    target = await User.find_one({"username": username})
     if not target:
         raise HTTPException(status_code=404, detail="User not found.")
     

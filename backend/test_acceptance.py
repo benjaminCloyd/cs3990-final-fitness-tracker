@@ -12,8 +12,14 @@ from auth.hash_password import hash_password
 
 @pytest.fixture(scope="function")
 async def client():
-    mongo_client = AsyncMongoClient("mongodb://localhost:27017")
-    db = mongo_client["ironlog"]
+    # Setup database connection manually to ensure everything is registered correctly
+    from backend.database.connection import get_settings
+    from backend.models import User, Session, Recipe, WorkoutTemplate, MealPlan, GroceryList
+    
+    settings = get_settings()
+    mongo_client = AsyncMongoClient(settings.DATABASE_URL)
+    db = mongo_client.get_default_database()
+    
     await init_beanie(
         database=db,
         document_models=[User, Session, Recipe, WorkoutTemplate, MealPlan, GroceryList]
@@ -31,7 +37,8 @@ async def client():
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
         yield ac
     
-    await mongo_client.drop_database("ironlog")
+    # Clean up
+    await mongo_client.drop_database(db.name)
     await mongo_client.close()
 
 @pytest.mark.asyncio
