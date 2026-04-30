@@ -1,3 +1,7 @@
+"""
+END-TO-END (E2E) TESTS: Replicates complete user flows in a full environment.
+Simulates a full user journey from registration to session and recipe creation.
+"""
 import pytest
 from httpx import AsyncClient, ASGITransport
 from main import app

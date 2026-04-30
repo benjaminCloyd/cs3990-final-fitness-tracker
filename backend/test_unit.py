@@ -1,3 +1,7 @@
+"""
+UNIT TESTS: Low-level tests for individual functions and logic.
+Verifies password hashing, JWT token handling, and data model mapping.
+"""
 import pytest
 from auth.hash_password import hash_password, verify_password
 from auth.jwt_handler import create_access_token, verify_access_token, TokenData

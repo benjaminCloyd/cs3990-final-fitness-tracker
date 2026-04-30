@@ -1,3 +1,7 @@
+"""
+INTEGRATION TESTS: Verifies interaction between modules and the database.
+Tests the persistence and retrieval of Users and Sessions in MongoDB.
+"""
 import pytest
 from beanie import init_beanie
 from pymongo import AsyncMongoClient

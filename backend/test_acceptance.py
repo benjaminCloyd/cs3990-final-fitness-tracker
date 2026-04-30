@@ -1,3 +1,7 @@
+"""
+ACCEPTANCE TESTS: Formal tests verifying that system satisfies business requirements.
+Checks security rules like admin-only access and login blocks for deactivated users.
+"""
 import pytest
 from httpx import AsyncClient, ASGITransport
 from main import app

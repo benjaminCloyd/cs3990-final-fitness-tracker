@@ -1,3 +1,7 @@
+"""
+PERFORMANCE TESTS: Evaluates system responsiveness and speed under workload.
+Measures API latency and login processing times against performance benchmarks.
+"""
 import pytest
 import time
 from httpx import AsyncClient, ASGITransport

@@ -1,3 +1,7 @@
+"""
+FUNCTIONAL TESTS: Focuses on business requirements and output verification.
+Tests the core authentication flow (Signup/Signin) from an API perspective.
+"""
 import pytest
 from httpx import AsyncClient, ASGITransport
 from main import app
