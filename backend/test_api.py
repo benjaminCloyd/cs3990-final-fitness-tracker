@@ -7,7 +7,8 @@ from models import User, Session, Recipe, Exercise, SetEntry, Ingredient, Workou
 # Simplified Direct Model Test
 @pytest.mark.asyncio
 async def test_direct_db_operations():
-    client = AsyncMongoClient("mongodb://localhost:27017/ironlog_direct_test")
+    # Use the base ironlog database
+    client = AsyncMongoClient("mongodb://localhost:27017/ironlog")
     await init_beanie(database=client.get_default_database(), 
                      document_models=[User, Session, Recipe, WorkoutTemplate, MealPlan, GroceryList])
     
@@ -43,4 +44,4 @@ async def test_direct_db_operations():
     await User.find_all().delete()
     await Session.find_all().delete()
     await Recipe.find_all().delete()
-    client.close()
+    await client.close()

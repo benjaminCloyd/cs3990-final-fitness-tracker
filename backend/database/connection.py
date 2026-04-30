@@ -20,7 +20,7 @@ class Settings(BaseSettings):
     SECRET_KEY: str
     USDA_API_KEY: str = "DEMO_KEY"
 
-    model_config = SettingsConfigDict(env_file="../.env")
+    model_config = SettingsConfigDict(env_file=".env")
 
 
 @lru_cache

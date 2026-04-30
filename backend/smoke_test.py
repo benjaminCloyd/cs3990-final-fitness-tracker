@@ -6,8 +6,8 @@ from pymongo import AsyncMongoClient
 from models import User, Session, Recipe, Exercise, SetEntry, Ingredient, MacroTargets
 
 async def run_smoke_test():
-    # Attempt to get DATABASE_URL from environment or use a common local default
-    db_url = os.getenv("DATABASE_URL", "mongodb://localhost:27017/ironlog_test")
+    # Use the base ironlog database
+    db_url = os.getenv("DATABASE_URL", "mongodb://localhost:27017/ironlog")
     print(f"--- Starting Smoke Test ---")
     print(f"Connecting to: {db_url}")
     
@@ -67,7 +67,6 @@ async def run_smoke_test():
         print(f"✅ Recipe created: {recipe.name}")
 
         # 4. Verification Cleanup (Optional)
-        # We'll leave them in for you to see in MongoDB, but we'll fetch them to prove they exist
         found_user = await User.find_one(User.username == test_username)
         if found_user:
             print(f"✅ Verification: Found user {found_user.username} in DB.")
@@ -77,7 +76,7 @@ async def run_smoke_test():
     except Exception as e:
         print(f"❌ Smoke Test Failed: {e}")
     finally:
-        client.close()
+        await client.close()
 
 if __name__ == "__main__":
     asyncio.run(run_smoke_test())
