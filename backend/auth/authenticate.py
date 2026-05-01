@@ -1,4 +1,5 @@
 from backend.auth.jwt_handler import TokenData, verify_access_token
+# depends so don't have to rewrite authenication logic every time
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 

@@ -2,6 +2,7 @@ from backend.auth.authenticate import authenticate
 from backend.auth.hash_password import hash_password, verify_password
 from backend.auth.jwt_handler import TokenData, create_access_token
 from backend.database.connection import Database
+# depends so don't have to rewrite authenication logic every time
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from backend.models import SignupRequest, TokenResponse, User, UserResponse, UserUpdateRequest

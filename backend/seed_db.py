@@ -1,4 +1,5 @@
 import asyncio
+#async initializer for mongoDB
 from beanie import init_beanie
 from pymongo import AsyncMongoClient
 from models import User, Session, Recipe, WorkoutTemplate, MealPlan, GroceryList, Exercise, SetEntry, Ingredient

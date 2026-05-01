@@ -2,6 +2,7 @@ from backend.auth.authenticate import authenticate
 from backend.auth.jwt_handler import TokenData
 from beanie import PydanticObjectId
 from backend.database.connection import Database
+# depends so don't have to rewrite authenication logic every time
 from fastapi import APIRouter, Depends, HTTPException, status
 from backend.models import Exercise, ExerciseRequest, Session, SessionRequest, User, WorkoutTemplate, TemplateRequest
 from backend.logger import log_event
