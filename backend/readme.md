@@ -7,12 +7,12 @@ This directory contains the FastAPI-based backend for the IRONLOG fitness and nu
 - **Object Document Mapping**: Beanie - for mapping data to mongo dB.
 - **Data Validation**: Pydantic- Data parsing and validation using Python type hints.
 - **Authentication**:  JWT with Bcrypt for password hashing.
-- **Nutrition Data**: [USDA FoodData API](https://fdc.nal.usda.gov/) - Uses for getting nutrition facts for ingredients
+- **Nutrition Data**: [USDA FoodData API](https://fdc.nal.usda.gov/api-guide) - Uses for getting nutrition facts for ingredients
 
 ## Data Communication
 
 ### API design
-The backend communicates with the frontend via a **RESTful API** using **JSON** as the primary data exchange format.
+The backend communicates with the frontend via RESTful API using JSON formatting.
 
 - **Routing**: Routes are modified into separate files (`user_routes.py`, `workout_routes.py`, `recipe_routes.py`) and mounted in `main.py`.
 - **Request Handling**: Use Pydantic (defined in `models.py`) to parse and validate incoming requests from frontend .
@@ -28,7 +28,7 @@ The application uses **MongoDB** for storage of data.
 
 - **Beanie ODM**: Maps Python classes directly to MongoDB collections structure e.  Used for database interactions.
 -  Database structures are defined in `models.py`. Beanie handles the initialization and indexing of these collections on startup.
-- **CRUD**: A generic `Database` wrapper (`database/connection.py`) for Beanie documents.
+- **CRUD**: A generic Database wrapper (`database/connection.py`) for Beanie documents.
 
 ### Key Data Entities
 - **User**: Stores profiles, hashed credentials, and users macro targets.
@@ -51,18 +51,20 @@ The `usda_api.py` module handles asynchronous requests to the USDA API. It fetch
 - `user_routes.py`, `workout_routes.py`, `recipe_routes.py`: API endpoint definitions.
 - `usda_api.py`: USDA FoodData integration.
 
-## Getting Started
+## Setup
 
 1. **Environment Variables**: Create a `.env` file in the `backend/` directory with:
-   ```env
+   env
    DATABASE_URL=mongodb://localhost:27017/ironlog
    SECRET_KEY=your_secret_key_here
    USDA_API_KEY=your_usda_api_key_here
-   ```
+
 2. **Install Dependencies**:
 
    pip install -r requirements.txt
 
-3. **Run the Server**:
+3. **Run Server**:
 
    uvicorn backend.main:app --reload
+
+   note the backend included in the command 
