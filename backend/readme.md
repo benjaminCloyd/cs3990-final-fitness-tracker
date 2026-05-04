@@ -54,17 +54,18 @@ The `usda_api.py` module handles asynchronous requests to the USDA API. It fetch
 ## Setup
 
 1. **Environment Variables**: Create a `.env` file in the `backend/` directory with:
-   env
+  ``` env
    DATABASE_URL=mongodb://localhost:27017/ironlog
    SECRET_KEY=your_secret_key_here
    USDA_API_KEY=your_usda_api_key_here
+   ```
 
 2. **Install Dependencies**:
-
+   ```
    pip install -r requirements.txt
-
+   ```
 3. **Run Server**:
-
+   ```
    uvicorn backend.main:app --reload
-
+   ```
    note the backend included in the command 
