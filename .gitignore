@@ -215,6 +215,7 @@ __marimo__/
 # Streamlit
 .streamlit/secrets.toml
 
-frontend/node_modules/
+node_modules/
 backend/testing/
 images/
+uploads/
