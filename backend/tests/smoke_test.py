@@ -3,7 +3,7 @@ import os
 from datetime import datetime
 from beanie import init_beanie
 from pymongo import AsyncMongoClient
-from models import User, Session, Recipe, Exercise, SetEntry, Ingredient, MacroTargets
+from backend.models import User, Session, Recipe, Exercise, SetEntry, Ingredient, MacroTargets
 
 async def run_smoke_test():
     # Use the base ironlog database

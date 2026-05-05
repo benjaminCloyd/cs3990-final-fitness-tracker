@@ -5,7 +5,7 @@ Tests the persistence and retrieval of Users and Sessions in MongoDB.
 import pytest
 from beanie import init_beanie
 from pymongo import AsyncMongoClient
-from models import User, Session, Recipe, WorkoutTemplate, MealPlan, GroceryList
+from backend.models import User, Session, Recipe, WorkoutTemplate, MealPlan, GroceryList
 from backend.database.connection import Database
 
 @pytest.fixture(scope="function")

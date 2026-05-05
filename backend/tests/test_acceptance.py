@@ -4,11 +4,11 @@ Checks security rules like admin-only access and login blocks for deactivated us
 """
 import pytest
 from httpx import AsyncClient, ASGITransport
-from main import app
+from backend.main import app
 from beanie import init_beanie
 from pymongo import AsyncMongoClient
-from models import User, Session, Recipe, WorkoutTemplate, MealPlan, GroceryList
-from auth.hash_password import hash_password
+from backend.models import User, Session, Recipe, WorkoutTemplate, MealPlan, GroceryList
+from backend.auth.hash_password import hash_password
 
 @pytest.fixture(scope="function")
 async def client():

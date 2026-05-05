@@ -4,10 +4,10 @@ Tests the core authentication flow (Signup/Signin) from an API perspective.
 """
 import pytest
 from httpx import AsyncClient, ASGITransport
-from main import app
+from backend.main import app
 from beanie import init_beanie
 from pymongo import AsyncMongoClient
-from models import User, Session, Recipe, WorkoutTemplate, MealPlan, GroceryList
+from backend.models import User, Session, Recipe, WorkoutTemplate, MealPlan, GroceryList
 
 @pytest.fixture(scope="function")
 async def client():

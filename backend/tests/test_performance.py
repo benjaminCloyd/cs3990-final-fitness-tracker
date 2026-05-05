@@ -5,7 +5,7 @@ Measures API latency and login processing times against performance benchmarks.
 import pytest
 import time
 from httpx import AsyncClient, ASGITransport
-from main import app
+from backend.main import app
 from beanie import init_beanie
 from pymongo import AsyncMongoClient
 from backend.models import User, Session, Recipe, WorkoutTemplate, MealPlan, GroceryList
