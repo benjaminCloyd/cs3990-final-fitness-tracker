@@ -30,7 +30,7 @@ app = FastAPI(title="IRONLOG", lifespan=lifespan)
 
 app.include_router(user_router,    prefix="/auth",     tags=["Auth"])
 app.include_router(workout_router, prefix="/sessions", tags=["Workouts"])
-app.include_router(recipe_router,  prefix="/recipes",  tags=["Recipes & Nutrition"])
+app.include_router(recipe_router,  prefix="/recipes",  tags=["Recipes"])
 
 
 # ── static files ──────────────────────────────────────────────────────────────

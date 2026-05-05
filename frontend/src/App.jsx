@@ -9,6 +9,7 @@ import SessionsPanel from './components/SessionsPanel.jsx';
 import ProgressPanel from './components/ProgressPanel.jsx';
 import AdminPanel    from './components/AdminPanel.jsx';
 import Toast         from './components/Toast.jsx';
+import RecipeLibrary from './components/RecipeLibrary.jsx';
 
 export default function App() {
   const { user, loading, logout } = useAuth();
@@ -59,6 +60,9 @@ export default function App() {
         )}
         {panel === 'progress' && (
           <ProgressPanel sessions={sessions} />
+        )}
+        {panel === 'recipes' && (
+          <RecipeLibrary />
         )}
         {panel === 'admin' && user.role === 'admin' && (
           <AdminPanel />

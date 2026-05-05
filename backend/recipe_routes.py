@@ -145,17 +145,27 @@ async def delete_recipe(recipe_id: str, user: TokenData = Depends(authenticate))
 @recipe_router.post("/upload-image")
 async def upload_recipe_image(file: UploadFile = File(...), user: TokenData = Depends(authenticate)):
     """Upload a recipe image to the server storage and return the public URL."""
+    log_event("File Upload Start", f"User {user.username} attempting to upload {file.filename}")
     ext = file.filename.split(".")[-1]
     # named files so doubles dont overwrite 
     filename = f"{uuid.uuid4()}.{ext}"
     dest = UPLOADS_DIR / filename
-    #copy image image to storage transfer in chunks using buffer
-    with open(dest, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
     
-    url = f"/uploads/{filename}"
-    log_event("File Upload", f"User {user.username} uploaded {filename}")
-    return {"url": url}
+    try:
+        # Read file content
+        content = await file.read()
+        log_event("File Read", f"Read {len(content)} bytes from {file.filename}")
+        
+        # Write to destination
+        with open(dest, "wb") as buffer:
+            buffer.write(content)
+        
+        url = f"/uploads/{filename}"
+        log_event("File Upload", f"User {user.username} uploaded {filename}")
+        return {"url": url}
+    except Exception as e:
+        log_event("File Upload Error", f"User {user.username} failed to upload {file.filename}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to save file: {str(e)}")
 
 
 # ── meal planner ──────────────────────────────────────────────────────────────
