@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from "react";
-import { apiGetRecipes, apiCreateRecipe, apiUpdateRecipe, apiUploadRecipeImage, apiDeleteRecipe } from '../api.js'; 
+import { apiGetRecipes, apiCreateRecipe, apiUpdateRecipe, apiUploadRecipeImage, apiDeleteRecipe } from '../api.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
 
 const RecipeLibrary = () => {
   const { logout } = useAuth();
   const { showToast } = useToast();
-  
+
   // State for data
   const [recipes, setRecipes] = useState([]);
   const [selectedRecipe, setSelectedRecipe] = useState(null);
@@ -82,17 +82,17 @@ const RecipeLibrary = () => {
   const handleEditRecipe = () => {
     setEditName(selectedRecipe.name);
     setEditInstructions(selectedRecipe.instructions);
-    setEditIngredients(selectedRecipe.ingredients && selectedRecipe.ingredients.length > 0 
-      ? selectedRecipe.ingredients.map(ing => ({ 
-          ...ing, 
-          baseMacros: { 
-            calories: (ing.calories / (parseFloat(ing.quantity) || 100)) * 100,
-            protein: (ing.protein / (parseFloat(ing.quantity) || 100)) * 100,
-            carbs: (ing.carbs / (parseFloat(ing.quantity) || 100)) * 100,
-            fat: (ing.fat / (parseFloat(ing.quantity) || 100)) * 100
-          },
-          isSearching: false
-        })) 
+    setEditIngredients(selectedRecipe.ingredients && selectedRecipe.ingredients.length > 0
+      ? selectedRecipe.ingredients.map(ing => ({
+        ...ing,
+        baseMacros: {
+          calories: (ing.calories / (parseFloat(ing.quantity) || 100)) * 100,
+          protein: (ing.protein / (parseFloat(ing.quantity) || 100)) * 100,
+          carbs: (ing.carbs / (parseFloat(ing.quantity) || 100)) * 100,
+          fat: (ing.fat / (parseFloat(ing.quantity) || 100)) * 100
+        },
+        isSearching: false
+      }))
       : [{ name: '', quantity: '', calories: 0, protein: 0, carbs: 0, fat: 0, isSearching: false }]
     );
     setEditImageFile(null);
@@ -221,32 +221,31 @@ const RecipeLibrary = () => {
   const calculateIngredientMacros = (ing) => {
     if (!ing.baseMacros || !ing.quantity) return ing;
     const factor = parseFloat(ing.quantity) / 100;
-    return {
-      ...ing,
-      calories: (ing.baseMacros.calories * factor).toFixed(1),
-      protein: (ing.baseMacros.protein * factor).toFixed(1),
-      carbs: (ing.baseMacros.carbs * factor).toFixed(1),
-      fat: (ing.baseMacros.fat * factor).toFixed(1)
-    };
+    const protein = parseFloat((ing.baseMacros.protein * factor).toFixed(2));
+    const carbs = parseFloat((ing.baseMacros.carbs * factor).toFixed(2));
+    const fat = parseFloat((ing.baseMacros.fat * factor).toFixed(2));
+    // Derive calories from macros — keeps all numbers internally consistent
+    const calories = parseFloat((protein * 4 + carbs * 4 + fat * 9).toFixed(1));
+    return { ...ing, calories, protein, carbs, fat };
   };
 
   const executeSearch = async (index, isEdit = false) => {
     const list = isEdit ? editIngredients : ingredients;
     const query = list[index].name;
-    
+
     if (!query || query.trim().length < 2) return;
-    
+
     updateIngredientState(index, 'isSearching', true, isEdit);
-    
+
     try {
       const data = await apiSearchNutrients(query.trim());
       let results = Array.isArray(data) ? data : [data];
 
       // Filter out items that have no macro data (all zeros) to avoid unusable results
-      results = results.filter(item => 
-        (parseFloat(item.calories) || 0) > 0 || 
-        (parseFloat(item.protein) || 0) > 0 || 
-        (parseFloat(item.carbs) || 0) > 0 || 
+      results = results.filter(item =>
+        (parseFloat(item.calories) || 0) > 0 ||
+        (parseFloat(item.protein) || 0) > 0 ||
+        (parseFloat(item.carbs) || 0) > 0 ||
         (parseFloat(item.fat) || 0) > 0
       );
 
@@ -280,11 +279,11 @@ const RecipeLibrary = () => {
   };
 
   const handleCreate = async () => {
-    if (!name.trim()) { 
-        showToast('Enter a recipe name.', 'error'); 
-        return; 
+    if (!name.trim()) {
+      showToast('Enter a recipe name.', 'error');
+      return;
     }
-    
+
     try {
       let imageUrl = null;
 
@@ -302,26 +301,26 @@ const RecipeLibrary = () => {
 
       // Ensure name exists and quantity is a valid number
       const validIngredients = ingredients
-          .filter(ing => ing.name.trim() !== '')
-          .map(ing => ({
-              name: ing.name.trim(),
-              quantity: String(ing.quantity || 0), // Ensure quantity is always a string
-              calories: parseFloat(ing.calories) || 0.0,
-              protein: parseFloat(ing.protein) || 0.0,
-              carbs: parseFloat(ing.carbs) || 0.0,
-              fat: parseFloat(ing.fat) || 0.0
-          }));
-      
-      const newRecipe = { 
-        name: name.trim(), 
-        instructions: instructions.trim(), 
-        ingredients: validIngredients, 
-        image_url: imageUrl 
+        .filter(ing => ing.name.trim() !== '')
+        .map(ing => ({
+          name: ing.name.trim(),
+          quantity: String(ing.quantity || 0), // Ensure quantity is always a string
+          calories: parseFloat(ing.calories) || 0.0,
+          protein: parseFloat(ing.protein) || 0.0,
+          carbs: parseFloat(ing.carbs) || 0.0,
+          fat: parseFloat(ing.fat) || 0.0
+        }));
+
+      const newRecipe = {
+        name: name.trim(),
+        instructions: instructions.trim(),
+        ingredients: validIngredients,
+        image_url: imageUrl
       };
-      
+
       await apiCreateRecipe(newRecipe);
       showToast(`Recipe "${name}" created.`);
-      
+
       // Reset Form
       setName('');
       setInstructions('');
@@ -331,9 +330,9 @@ const RecipeLibrary = () => {
       setCreateImagePreview('');
       loadRecipes();
     } catch (err) {
-        // This logs the ACTUAL error to the console so you can see if it's a 400 or 500 error
-        console.error("Save Error:", err);
-        showToast(err.message || 'Error saving recipe', 'error');
+      // This logs the ACTUAL error to the console so you can see if it's a 400 or 500 error
+      console.error("Save Error:", err);
+      showToast(err.message || 'Error saving recipe', 'error');
     }
   };
 
@@ -367,7 +366,7 @@ const RecipeLibrary = () => {
 
   return (
     <div className="recipes-layout" style={{ height: 'calc(100vh - 120px)' }}>
-      
+
       {/* ── LEFT COLUMN: Recipe List ── */}
       <div className="recipes-list-column" style={{ display: 'flex', flexDirection: 'column' }}>
         <div className="sidebar-header">
@@ -381,8 +380,8 @@ const RecipeLibrary = () => {
             </div>
           ) : (
             recipes.map((r) => (
-              <div 
-                key={r.id || r._id} 
+              <div
+                key={r.id || r._id}
                 className={`session-item ${selectedRecipeId === (r.id || r._id) ? 'selected' : ''}`}
                 onClick={() => handleSelectRecipe(r)}
               >
@@ -390,7 +389,7 @@ const RecipeLibrary = () => {
                   <div className="s-name">{r.name}</div>
                   <div className="s-meta">{r.ingredients?.length || 0} Ingredients</div>
                 </div>
-                <button 
+                <button
                   className="btn-danger del-btn"
                   onClick={(e) => handleDeleteRecipe(r.id || r._id, e)}
                 >
@@ -421,27 +420,27 @@ const RecipeLibrary = () => {
 
             <div className="form-row">
               <label>Recipe Name</label>
-              <input 
-                type="text" 
+              <input
+                type="text"
                 className="input-base"
                 style={{ width: '100%', background: '#1a1a1a', border: '1px solid #333', color: 'white', padding: '12px' }}
-                value={name} 
+                value={name}
                 placeholder="Chicken Parm, Smoothie..."
                 onChange={(e) => setName(e.target.value)}
               />
             </div>
-            
+
             <div className="form-row" style={{ marginTop: '20px' }}>
               <label>Ingredients</label>
               <div style={{ marginBottom: '10px' }}>
                 {ingredients.map((ing, i) => (
                   <div key={i} style={{ position: 'relative', marginBottom: '10px' }}>
                     <div style={{ display: 'flex', gap: '8px' }}>
-                      <input 
-                        type="text" 
-                        placeholder="Ingredient" 
+                      <input
+                        type="text"
+                        placeholder="Ingredient"
                         style={{ flex: '3', background: '#1a1a1a', border: '1px solid #333', color: 'white', padding: '8px' }}
-                        value={ing.name} 
+                        value={ing.name}
                         onChange={(e) => updateIngredient(i, 'name', e.target.value)}
                         onKeyDown={(e) => {
                           if (e.key === 'Enter') {
@@ -450,17 +449,17 @@ const RecipeLibrary = () => {
                           }
                         }}
                       />
-                      <input 
-                        type="number" 
-                        placeholder="Grams" 
+                      <input
+                        type="number"
+                        placeholder="Grams"
                         style={{ flex: '1.2', background: '#1a1a1a', border: '1px solid #333', color: 'white', padding: '8px' }}
-                        value={ing.quantity} 
+                        value={ing.quantity}
                         onChange={(e) => updateIngredient(i, 'quantity', e.target.value)}
                       />
                       <button className="btn-remove-set" onClick={() => removeIngredient(i)}>✕</button>
                     </div>
                     {ing.isSearching && (
-                      <div style={{ 
+                      <div style={{
                         position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 10,
                         background: '#222', border: '1px solid var(--border)', borderRadius: '4px',
                         padding: '10px', marginTop: '4px', fontSize: '0.75rem', boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
@@ -470,7 +469,7 @@ const RecipeLibrary = () => {
                       </div>
                     )}
                     {ing.searchResults && ing.searchResults.length > 0 && (
-                      <div style={{ 
+                      <div style={{
                         position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 10,
                         background: '#222', border: '1px solid var(--border)', borderRadius: '4px',
                         padding: '5px', marginTop: '4px', fontSize: '0.8rem', boxShadow: '0 4px 12px rgba(0,0,0,0.5)'
@@ -498,10 +497,10 @@ const RecipeLibrary = () => {
 
             <div className="form-row" style={{ marginTop: '20px' }}>
               <label>Instructions</label>
-              <textarea 
-                className="input-base" 
+              <textarea
+                className="input-base"
                 style={{ width: '100%', background: '#1a1a1a', border: '1px solid #333', color: 'white', padding: '12px', fontFamily: 'JetBrains Mono', minHeight: '120px' }}
-                value={instructions} 
+                value={instructions}
                 onChange={(e) => setInstructions(e.target.value)}
                 placeholder="Step by step directions..."
               />
@@ -523,18 +522,18 @@ const RecipeLibrary = () => {
                   />
                 </div>
                 {createImagePreview && (
-                  <div style={{ 
+                  <div style={{
                     background: 'var(--surface2)',
                     padding: '20px',
                     border: '1px solid var(--border)',
                     borderRadius: '4px',
                     textAlign: 'center'
                   }}>
-                    <img 
-                      src={createImagePreview} 
+                    <img
+                      src={createImagePreview}
                       alt="Preview"
-                      style={{ 
-                        maxWidth: '100%', 
+                      style={{
+                        maxWidth: '100%',
                         maxHeight: '300px',
                         borderRadius: '4px',
                         objectFit: 'contain'
@@ -563,40 +562,40 @@ const RecipeLibrary = () => {
                 <section className="exercises-section">
                   <h3>MACROS</h3>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '20px' }}>
-                    <div style={{ 
-                      background: 'var(--surface2)', 
-                      border: '1px solid var(--border)', 
-                      padding: '16px', 
+                    <div style={{
+                      background: 'var(--surface2)',
+                      border: '1px solid var(--border)',
+                      padding: '16px',
                       borderRadius: '4px',
                       textAlign: 'center'
                     }}>
                       <div style={{ fontSize: '12px', color: '#888', textTransform: 'uppercase', marginBottom: '8px' }}>Calories</div>
                       <div style={{ fontSize: '24px', fontWeight: '600', color: '#e8e8e8' }}>{selectedRecipe.calories_per_serving.toFixed(1)}</div>
                     </div>
-                    <div style={{ 
-                      background: 'var(--surface2)', 
-                      border: '1px solid var(--border)', 
-                      padding: '16px', 
+                    <div style={{
+                      background: 'var(--surface2)',
+                      border: '1px solid var(--border)',
+                      padding: '16px',
                       borderRadius: '4px',
                       textAlign: 'center'
                     }}>
                       <div style={{ fontSize: '12px', color: '#888', textTransform: 'uppercase', marginBottom: '8px' }}>Protein (g)</div>
                       <div style={{ fontSize: '24px', fontWeight: '600', color: '#e8e8e8' }}>{selectedRecipe.protein_per_serving.toFixed(1)}</div>
                     </div>
-                    <div style={{ 
-                      background: 'var(--surface2)', 
-                      border: '1px solid var(--border)', 
-                      padding: '16px', 
+                    <div style={{
+                      background: 'var(--surface2)',
+                      border: '1px solid var(--border)',
+                      padding: '16px',
                       borderRadius: '4px',
                       textAlign: 'center'
                     }}>
                       <div style={{ fontSize: '12px', color: '#888', textTransform: 'uppercase', marginBottom: '8px' }}>Carbs (g)</div>
                       <div style={{ fontSize: '24px', fontWeight: '600', color: '#e8e8e8' }}>{selectedRecipe.carbs_per_serving.toFixed(1)}</div>
                     </div>
-                    <div style={{ 
-                      background: 'var(--surface2)', 
-                      border: '1px solid var(--border)', 
-                      padding: '16px', 
+                    <div style={{
+                      background: 'var(--surface2)',
+                      border: '1px solid var(--border)',
+                      padding: '16px',
                       borderRadius: '4px',
                       textAlign: 'center'
                     }}>
@@ -632,9 +631,9 @@ const RecipeLibrary = () => {
 
                 <section className="add-exercise-section">
                   <h3>INSTRUCTIONS</h3>
-                  <div style={{ 
-                    fontFamily: 'JetBrains Mono', 
-                    lineHeight: '1.6', 
+                  <div style={{
+                    fontFamily: 'JetBrains Mono',
+                    lineHeight: '1.6',
                     color: '#e8e8e8',
                     whiteSpace: 'pre-wrap',
                     background: 'var(--surface2)',
@@ -647,18 +646,18 @@ const RecipeLibrary = () => {
 
                 {selectedRecipe.image_url && (
                   <section className="add-exercise-section">
-                    <div style={{ 
+                    <div style={{
                       background: 'var(--surface2)',
                       padding: '20px',
                       border: '1px solid var(--border)',
                       borderRadius: '4px',
                       textAlign: 'center'
                     }}>
-                      <img 
-                        src={selectedRecipe.image_url} 
+                      <img
+                        src={selectedRecipe.image_url}
                         alt={selectedRecipe.name}
-                        style={{ 
-                          maxWidth: '100%', 
+                        style={{
+                          maxWidth: '100%',
                           maxHeight: '400px',
                           borderRadius: '4px',
                           objectFit: 'contain'
@@ -732,7 +731,7 @@ const RecipeLibrary = () => {
                         <button className="btn-remove-set" onClick={() => removeEditIngredient(i)}>✕</button>
                       </div>
                       {ing.isSearching && (
-                        <div style={{ 
+                        <div style={{
                           position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 100,
                           background: '#222', border: '1px solid var(--border)', borderRadius: '4px',
                           padding: '10px', marginTop: '4px', fontSize: '0.75rem', boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
@@ -742,27 +741,27 @@ const RecipeLibrary = () => {
                         </div>
                       )}
                       {ing.searchResults && ing.searchResults.length > 0 && (
-                        <div style={{ 
+                        <div style={{
                           position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 100,
                           background: '#222', border: '1px solid var(--border)', borderRadius: '4px',
                           padding: '5px', marginTop: '4px', fontSize: '0.8rem', boxShadow: '0 4px 12px rgba(0,0,0,0.5)'
                         }}>
                           <div style={{ color: '#888', fontSize: '10px', marginBottom: '5px', paddingLeft: '5px' }}>SUGGESTIONS:</div>
                           {ing.searchResults.slice(0, 3).map((result, idx) => (
-                              <div 
-                                  key={idx}
-                                  className="suggestion-item"
-                                  style={{ padding: '8px', cursor: 'pointer', borderBottom: idx < 2 ? '1px solid #333' : 'none' }}
-                                  onClick={() => {
-                                      const newList = [...editIngredients];
-                                      newList[i].name = result.name || ing.name;
-                                      newList[i].baseMacros = result;
-                                      newList[i].searchResults = null;
-                                      setEditIngredients(newList.map((it, itemIdx) => itemIdx === i ? calculateIngredientMacros(it) : it));
-                                  }}
-                              >
-                                  {result.name || ing.name} <span style={{ color: 'var(--green)', float: 'right' }}>SELECT</span>
-                              </div>
+                            <div
+                              key={idx}
+                              className="suggestion-item"
+                              style={{ padding: '8px', cursor: 'pointer', borderBottom: idx < 2 ? '1px solid #333' : 'none' }}
+                              onClick={() => {
+                                const newList = [...editIngredients];
+                                newList[i].name = result.name || ing.name;
+                                newList[i].baseMacros = result;
+                                newList[i].searchResults = null;
+                                setEditIngredients(newList.map((it, itemIdx) => itemIdx === i ? calculateIngredientMacros(it) : it));
+                              }}
+                            >
+                              {result.name || ing.name} <span style={{ color: 'var(--green)', float: 'right' }}>SELECT</span>
+                            </div>
                           ))}
                         </div>
                       )}
@@ -795,8 +794,8 @@ const RecipeLibrary = () => {
                   <h3>RECIPE IMAGE</h3>
                   <div style={{ marginBottom: '20px' }}>
                     <div style={{ marginBottom: '10px' }}>
-                      <label 
-                        htmlFor="edit-image-upload" 
+                      <label
+                        htmlFor="edit-image-upload"
                         className="btn btn-ghost"
                         style={{ cursor: 'pointer', display: 'inline-block' }}
                       >
@@ -811,18 +810,18 @@ const RecipeLibrary = () => {
                       />
                     </div>
                     {editImagePreview && (
-                      <div style={{ 
+                      <div style={{
                         background: 'var(--surface2)',
                         padding: '20px',
                         border: '1px solid var(--border)',
                         borderRadius: '4px',
                         textAlign: 'center'
                       }}>
-                        <img 
-                          src={editImagePreview} 
+                        <img
+                          src={editImagePreview}
                           alt="Preview"
-                          style={{ 
-                            maxWidth: '100%', 
+                          style={{
+                            maxWidth: '100%',
                             maxHeight: '300px',
                             borderRadius: '4px',
                             objectFit: 'contain'

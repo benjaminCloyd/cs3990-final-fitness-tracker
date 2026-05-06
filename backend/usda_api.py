@@ -1,24 +1,27 @@
 import httpx
 from backend.database.connection import get_settings
 
-# ── configuration ─────────────────────────────────────────────────────────────
-
 SETTINGS = get_settings()
 BASE_URL = "https://api.nal.usda.gov/fdc/v1"
 
+NUTRIENT_MAP = {
+    # 1008 intentionally removed — calories are derived from macros (P×4 + C×4 + F×9)
+    1003: "protein",
+    1005: "carbs",
+    1004: "fat",
+}
 
-# ── core logic ────────────────────────────────────────────────────────────────
 
-
-async def search_food_nutrients(query: str):
+async def search_food_nutrients(query: str, max_results: int = 3) -> list | None:
     """
-    Search the USDA FoodData Central API for a food item and extract
-    macronutrient data per 100g.
+    Search USDA FoodData Central and return the top N results with
+    macro data (protein/carbs/fat) per 100g. Calories are intentionally
+    excluded — they should be derived from macros for internal consistency.
     """
     params = {
         "api_key": SETTINGS.USDA_API_KEY,
         "query": query,
-        "pageSize": 1,
+        "pageSize": max_results * 3,
         "dataType": ["Foundation", "SR Legacy"],
     }
 
@@ -28,25 +31,27 @@ async def search_food_nutrients(query: str):
             return None
 
         data = response.json()
-        if not data.get("foods"):
+        foods = data.get("foods", [])
+        if not foods:
             return None
 
-        # Take the most relevant match
-        food = data["foods"][0]
-        nutrients = {"calories": 0.0, "protein": 0.0, "carbs": 0.0, "fat": 0.0}
-
-        # USDA Nutrient ID Mapping Table
-        # 1008: Energy (kcal)
-        # 1003: Protein (g)
-        # 1005: Carbohydrate (g)
-        # 1004: Total lipid (fat) (g)
-        mapping = {1008: "calories", 1003: "protein", 1005: "carbs", 1004: "fat"}
+    results = []
+    for food in foods:
+        nutrients = {k: 0.0 for k in NUTRIENT_MAP.values()}
 
         for n in food.get("foodNutrients", []):
             nid = n.get("nutrientId")
-            if nid in mapping:
-                nutrients[mapping[nid]] = n.get("value", 0.0)
+            if nid in NUTRIENT_MAP:
+                nutrients[NUTRIENT_MAP[nid]] = round(n.get("value", 0.0), 2)
 
-        nutrients["name"] = food.get("description", "")
+        # Skip entries where all three macros are zero
+        if all(v == 0 for v in nutrients.values()):
+            continue
 
-        return nutrients
+        nutrients["name"] = food.get("description", "Unknown")
+        results.append(nutrients)
+
+        if len(results) >= max_results:
+            break
+
+    return results if results else None

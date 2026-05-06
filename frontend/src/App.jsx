@@ -42,7 +42,7 @@ export default function App() {
   if (loading) {
     return (
       <div className="boot-screen">
-        <span className="boot-logo">IRONLOG</span>
+        <span className="boot-logo">Fitness Tracker</span>
       </div>
     );
   }

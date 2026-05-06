@@ -14,7 +14,7 @@ export default function Header({ activePanel, setPanel }) {
   return (
     <header className="header">
       <div className="header-logo" style={{ cursor: 'pointer' }} onClick={() => setPanel('hub')}>
-        IRONLOG
+        Fitness Tracker
       </div>
       <nav className="nav-tabs">
         {tabs.map((t) => (

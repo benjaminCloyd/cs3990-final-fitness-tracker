@@ -5,7 +5,7 @@ export default function LandingPage({ onSelect }) {
 
   return (
     <div className="hub-root">
-      <div className="hub-wordmark">IRONLOG</div>
+      <div className="hub-wordmark">Fitness Tracker</div>
 
       <div className="hub-split">
         {/* ── LEFT: IRON ── */}

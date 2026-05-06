@@ -10,13 +10,23 @@ from typing import List, Optional
 from backend.auth.authenticate import authenticate
 from backend.auth.jwt_handler import TokenData
 from beanie import PydanticObjectId
+
 # depends so don't have to rewrite authenication logic every time
 from fastapi import APIRouter, Depends, HTTPException, File, UploadFile, status
 from fastapi.responses import FileResponse
+
 # allows for async tasks clean up in this case
 from starlette.background import BackgroundTask
 
-from backend.models import Recipe, RecipeRequest, MealPlan, MealPlanRequest, GroceryList, Ingredient, User
+from backend.models import (
+    Recipe,
+    RecipeRequest,
+    MealPlan,
+    MealPlanRequest,
+    GroceryList,
+    Ingredient,
+    User,
+)
 from backend.usda_api import search_food_nutrients
 from backend.logger import log_event
 
@@ -41,18 +51,21 @@ async def get_recipe_or_404(recipe_id: str, user: TokenData) -> Recipe:
         oid = PydanticObjectId(recipe_id)
     except Exception:
         raise HTTPException(status_code=400, detail="Invalid recipe ID format.")
-    
+
     recipe = await Recipe.get(oid)
     if not recipe:
         raise HTTPException(status_code=404, detail="Recipe not found.")
-    
+
     if user.role != "admin" and recipe.owner != user.username:
-        raise HTTPException(status_code=403, detail="Not authorized to access this recipe.")
+        raise HTTPException(
+            status_code=403, detail="Not authorized to access this recipe."
+        )
     return recipe
 
 
 def _sort_meal_plans(plans: List[MealPlan]) -> List[MealPlan]:
     """Sort meal plans by date (YYYY-MM-DD or MM/DD/YYYY) in descending order."""
+
     def key(p: MealPlan):
         try:
             # Handle YYYY-MM-DD from HTML5 date picker or legacy MM/DD/YYYY
@@ -63,7 +76,12 @@ def _sort_meal_plans(plans: List[MealPlan]) -> List[MealPlan]:
             return (int(y), int(m), int(d))
         except Exception:
             return (0, 0, 0)
+
     return sorted(plans, key=key, reverse=True)
+
+
+def macros_to_calories(protein: float, carbs: float, fat: float) -> float:
+    return round(protein * 4 + carbs * 4 + fat * 9, 1)
 
 
 # ── usda search ───────────────────────────────────────────────────────────────
@@ -74,7 +92,9 @@ async def search_nutrients(query: str, user: TokenData = Depends(authenticate)):
     """Search for food items via USDA API to auto-populate ingredient macros."""
     nutrients = await search_food_nutrients(query)
     if not nutrients:
-        raise HTTPException(status_code=404, detail="No nutrient data found for this item.")
+        raise HTTPException(
+            status_code=404, detail="No nutrient data found for this item."
+        )
     return nutrients
 
 
@@ -93,11 +113,11 @@ async def list_recipes(user: TokenData = Depends(authenticate)):
 async def create_recipe(body: RecipeRequest, user: TokenData = Depends(authenticate)):
     """Create a new recipe and calculate cumulative nutritional macros."""
     # Sum ingredients for per-serving total
-    cals = sum(i.calories for i in body.ingredients)
     prot = sum(i.protein for i in body.ingredients)
     carb = sum(i.carbs for i in body.ingredients)
     fat = sum(i.fat for i in body.ingredients)
-    
+    cals = macros_to_calories(prot, carb, fat)
+
     recipe = Recipe(
         name=body.name,
         ingredients=body.ingredients,
@@ -107,7 +127,7 @@ async def create_recipe(body: RecipeRequest, user: TokenData = Depends(authentic
         calories_per_serving=cals,
         protein_per_serving=prot,
         carbs_per_serving=carb,
-        fat_per_serving=fat
+        fat_per_serving=fat,
     )
     await recipe.create()
     log_event("Recipe Created", f"Recipe '{recipe.name}' created by {user.username}")
@@ -121,16 +141,18 @@ async def get_recipe(recipe_id: str, user: TokenData = Depends(authenticate)):
 
 
 @recipe_router.put("/{recipe_id}")
-async def update_recipe(recipe_id: str, body: RecipeRequest, user: TokenData = Depends(authenticate)):
+async def update_recipe(
+    recipe_id: str, body: RecipeRequest, user: TokenData = Depends(authenticate)
+):
     """Update recipe details and re-calculate total macro breakdown."""
     recipe = await get_recipe_or_404(recipe_id, user)
-    
+
     # Recalculate based on new ingredient list
     cals = sum(i.calories for i in body.ingredients)
     prot = sum(i.protein for i in body.ingredients)
     carb = sum(i.carbs for i in body.ingredients)
     fat = sum(i.fat for i in body.ingredients)
-    
+
     recipe.name = body.name
     recipe.ingredients = body.ingredients
     recipe.instructions = body.instructions
@@ -139,7 +161,7 @@ async def update_recipe(recipe_id: str, body: RecipeRequest, user: TokenData = D
     recipe.protein_per_serving = prot
     recipe.carbs_per_serving = carb
     recipe.fat_per_serving = fat
-    
+
     await recipe.save()
     log_event("Recipe Updated", f"Recipe '{recipe.name}' updated by {user.username}")
     return recipe
@@ -158,28 +180,36 @@ async def delete_recipe(recipe_id: str, user: TokenData = Depends(authenticate))
 
 
 @recipe_router.post("/upload-image")
-async def upload_recipe_image(file: UploadFile = File(...), user: TokenData = Depends(authenticate)):
+async def upload_recipe_image(
+    file: UploadFile = File(...), user: TokenData = Depends(authenticate)
+):
     """Upload a recipe image to the server storage and return the public URL."""
-    log_event("File Upload Start", f"User {user.username} attempting to upload {file.filename}")
+    log_event(
+        "File Upload Start",
+        f"User {user.username} attempting to upload {file.filename}",
+    )
     ext = file.filename.split(".")[-1]
-    # named files so doubles dont overwrite 
+    # named files so doubles dont overwrite
     filename = f"{uuid.uuid4()}.{ext}"
     dest = UPLOADS_DIR / filename
-    
+
     try:
         # Read file content
         content = await file.read()
         log_event("File Read", f"Read {len(content)} bytes from {file.filename}")
-        
+
         # Write to destination
         with open(dest, "wb") as buffer:
             buffer.write(content)
-        
+
         url = f"/uploads/{filename}"
         log_event("File Upload", f"User {user.username} uploaded {filename}")
         return {"url": url}
     except Exception as e:
-        log_event("File Upload Error", f"User {user.username} failed to upload {file.filename}: {str(e)}")
+        log_event(
+            "File Upload Error",
+            f"User {user.username} failed to upload {file.filename}: {str(e)}",
+        )
         raise HTTPException(status_code=500, detail=f"Failed to save file: {str(e)}")
 
 
@@ -197,36 +227,43 @@ async def list_meal_plans(user: TokenData = Depends(authenticate)):
 
 
 @recipe_router.post("/meal-plans")
-async def create_meal_plan(body: MealPlanRequest, user: TokenData = Depends(authenticate)):
+async def create_meal_plan(
+    body: MealPlanRequest, user: TokenData = Depends(authenticate)
+):
     """Build and save a weekly meal plan structure."""
     plan = MealPlan(
-        week_start_date=body.week_start_date,
-        owner=user.username,
-        slots=body.slots
+        week_start_date=body.week_start_date, owner=user.username, slots=body.slots
     )
     await plan.create()
     return plan
 
 
 @recipe_router.put("/meal-plans/{plan_id}", response_model=MealPlan)
-async def update_meal_plan(plan_id: str, body: MealPlanRequest, user: TokenData = Depends(authenticate)):
+async def update_meal_plan(
+    plan_id: str, body: MealPlanRequest, user: TokenData = Depends(authenticate)
+):
     """Update an existing meal plan's date or assigned recipes."""
     try:
         oid = PydanticObjectId(plan_id)
     except Exception:
         raise HTTPException(status_code=400, detail="Invalid plan ID format.")
-    
+
     plan = await MealPlan.get(oid)
     if not plan:
         raise HTTPException(status_code=404, detail="Meal plan not found.")
-    
+
     if user.role != "admin" and plan.owner != user.username:
-        raise HTTPException(status_code=403, detail="Not authorized to update this plan.")
-    
+        raise HTTPException(
+            status_code=403, detail="Not authorized to update this plan."
+        )
+
     plan.week_start_date = body.week_start_date
     plan.slots = body.slots
     await plan.save()
-    log_event("Meal Plan Updated", f"Meal plan for {plan.week_start_date} updated by {user.username}")
+    log_event(
+        "Meal Plan Updated",
+        f"Meal plan for {plan.week_start_date} updated by {user.username}",
+    )
     return plan
 
 
@@ -237,16 +274,21 @@ async def delete_meal_plan(plan_id: str, user: TokenData = Depends(authenticate)
         oid = PydanticObjectId(plan_id)
     except Exception:
         raise HTTPException(status_code=400, detail="Invalid plan ID format.")
-    
+
     plan = await MealPlan.get(oid)
     if not plan:
         raise HTTPException(status_code=404, detail="Meal plan not found.")
-    
+
     if user.role != "admin" and plan.owner != user.username:
-        raise HTTPException(status_code=403, detail="Not authorized to delete this plan.")
-    
+        raise HTTPException(
+            status_code=403, detail="Not authorized to delete this plan."
+        )
+
     await plan.delete()
-    log_event("Meal Plan Deleted", f"Meal plan for {plan.week_start_date} deleted by {user.username}")
+    log_event(
+        "Meal Plan Deleted",
+        f"Meal plan for {plan.week_start_date} deleted by {user.username}",
+    )
     return {"message": "Meal plan deleted successfully"}
 
 
@@ -257,18 +299,19 @@ async def get_meal_plan_macros(plan_id: str, user: TokenData = Depends(authentic
         oid = PydanticObjectId(plan_id)
     except Exception:
         raise HTTPException(status_code=400, detail="Invalid plan ID.")
-    
+
     plan = await MealPlan.get(oid)
-    if not plan: raise HTTPException(status_code=404, detail="Plan not found.")
-    
+    if not plan:
+        raise HTTPException(status_code=404, detail="Plan not found.")
+
     # Aggregate macros mapped to specific days
-    daily_macros = {} # Format: {"Monday": {"calories": 0, ...}}
-    
+    daily_macros = {}  # Format: {"Monday": {"calories": 0, ...}}
+
     for slot_key, recipe_id in plan.slots.items():
         day = slot_key.split("_")[0]
         if day not in daily_macros:
             daily_macros[day] = {"calories": 0, "protein": 0, "carbs": 0, "fat": 0}
-        
+
         try:
             recipe_oid = PydanticObjectId(recipe_id)
             recipe = await Recipe.get(recipe_oid)
@@ -279,7 +322,7 @@ async def get_meal_plan_macros(plan_id: str, user: TokenData = Depends(authentic
                 daily_macros[day]["fat"] += recipe.fat_per_serving
         except:
             continue
-            
+
     return daily_macros
 
 
@@ -293,12 +336,13 @@ async def generate_grocery_list(plan_id: str, user: TokenData = Depends(authenti
         oid = PydanticObjectId(plan_id)
     except Exception:
         raise HTTPException(status_code=400, detail="Invalid plan ID.")
-    
+
     plan = await MealPlan.get(oid)
-    if not plan: raise HTTPException(status_code=404, detail="Plan not found.")
-    
-    ingredients_map = {} # Dictionary mapping ingredient name to lists of quantities
-    
+    if not plan:
+        raise HTTPException(status_code=404, detail="Plan not found.")
+
+    ingredients_map = {}  # Dictionary mapping ingredient name to lists of quantities
+
     for recipe_id in plan.slots.values():
         try:
             recipe = await Recipe.get(PydanticObjectId(recipe_id))
@@ -307,37 +351,42 @@ async def generate_grocery_list(plan_id: str, user: TokenData = Depends(authenti
                     if ing.name not in ingredients_map:
                         ingredients_map[ing.name] = []
                     ingredients_map[ing.name].append(ing.quantity)
-        except: continue
-        
+        except:
+            continue
+
     consolidated = []
     for name, quantities in ingredients_map.items():
         total = 0.0
         unit = ""
         can_sum = True
-        
+
         for q in quantities:
             # Attempt to separate number from unit (e.g., "100 g")
             parts = q.strip().split()
             try:
-                if not parts: continue
+                if not parts:
+                    continue
                 val = float(parts[0])
                 u = " ".join(parts[1:]) if len(parts) > 1 else ""
-                if unit == "": unit = u
+                if unit == "":
+                    unit = u
                 elif unit != u:
-                    can_sum = False # Different units, cannot sum reliably
+                    can_sum = False  # Different units, cannot sum reliably
                     break
                 total += val
             except (ValueError, IndexError):
                 can_sum = False
                 break
-        
+
         if can_sum and total > 0:
             q_str = f"{int(total) if total.is_integer() else total} {unit if unit else 'g'}".strip()
             consolidated.append(Ingredient(name=name, quantity=q_str))
         else:
             consolidated.append(Ingredient(name=name, quantity=", ".join(quantities)))
-    
-    gl = GroceryList(owner=user.username, items=consolidated, is_checked=[False]*len(consolidated))
+
+    gl = GroceryList(
+        owner=user.username, items=consolidated, is_checked=[False] * len(consolidated)
+    )
     await gl.create()
     return gl
 
@@ -345,25 +394,29 @@ async def generate_grocery_list(plan_id: str, user: TokenData = Depends(authenti
 @recipe_router.get("/grocery-lists/latest", response_model=Optional[GroceryList])
 async def get_latest_grocery_list(user: TokenData = Depends(authenticate)):
     """Retrieve the most recently generated grocery list for the user."""
-    lists = await GroceryList.find(GroceryList.owner == user.username).sort("-id").to_list()
+    lists = (
+        await GroceryList.find(GroceryList.owner == user.username).sort("-id").to_list()
+    )
     return lists[0] if lists else None
 
 
 @recipe_router.put("/grocery-lists/{list_id}/toggle/{item_idx}")
-async def toggle_grocery_item(list_id: str, item_idx: int, user: TokenData = Depends(authenticate)):
+async def toggle_grocery_item(
+    list_id: str, item_idx: int, user: TokenData = Depends(authenticate)
+):
     """Toggle the checked status of a specific ingredient in the list."""
     try:
         oid = PydanticObjectId(list_id)
     except Exception:
         raise HTTPException(status_code=400, detail="Invalid ID.")
-    
+
     gl = await GroceryList.get(oid)
     if not gl or gl.owner != user.username:
         raise HTTPException(status_code=404, detail="List not found.")
-    
+
     if item_idx < 0 or item_idx >= len(gl.is_checked):
         raise HTTPException(status_code=400, detail="Invalid item index.")
-    
+
     # Toggle boolean
     gl.is_checked[item_idx] = not gl.is_checked[item_idx]
     # Beanie requires explicit save for array modifications in some versions
@@ -378,21 +431,26 @@ async def download_grocery_list(list_id: str, user: TokenData = Depends(authenti
         oid = PydanticObjectId(list_id)
     except Exception:
         raise HTTPException(status_code=400, detail="Invalid ID.")
-    
+
     gl = await GroceryList.get(oid)
-    if not gl: raise HTTPException(status_code=404, detail="List not found.")
-    
+    if not gl:
+        raise HTTPException(status_code=404, detail="List not found.")
+
     # Generate text content for the printable list
     content = f"GROCERY LIST FOR {user.username}\n\n"
     for item in gl.items:
         content += f"- [ ] {item.name} ({item.quantity})\n"
-    
+
     temp_file = Path(f"grocery_list_{list_id}.txt")
     with open(temp_file, "w") as f:
         f.write(content)
-        
+
     # Use BackgroundTask to ensure cleanup of temporary files once download completes prevents blocking for other users
-    return FileResponse(temp_file, filename="grocery_list.txt", background=BackgroundTask(temp_file.unlink))
+    return FileResponse(
+        temp_file,
+        filename="grocery_list.txt",
+        background=BackgroundTask(temp_file.unlink),
+    )
 
 
 # ── admin file management ─────────────────────────────────────────────────────
