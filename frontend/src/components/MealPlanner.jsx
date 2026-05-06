@@ -13,6 +13,7 @@ const MealPlanner = () => {
   const [recipes, setRecipes] = useState([]);
   const [mealPlans, setMealPlans] = useState([]);
   const [selectedPlan, setSelectedPlan] = useState(null);
+  const [selectedPlanId, setSelectedPlanId] = useState(null);
   const [weekStartDate, setWeekStartDate] = useState("");
   const [planSlots, setPlanSlots] = useState({}); 
   const [loading, setLoading] = useState(false);
@@ -80,6 +81,7 @@ const MealPlanner = () => {
 
   const handleSelectPlan = (plan) => {
     setSelectedPlan(plan);
+    setSelectedPlanId(plan.id || plan._id);
     setIsCreating(false);
     setIsEditing(false);
     setIsViewingGrocery(false);
@@ -91,6 +93,7 @@ const MealPlanner = () => {
     setIsCreating(true);
     setIsEditing(false);
     setSelectedPlan(null);
+    setSelectedPlanId(null)
     setIsViewingGrocery(false);
     setWeekStartDate("");
     setPlanSlots({});
@@ -103,6 +106,7 @@ const MealPlanner = () => {
       setPlanSlots(selectedPlan.slots || {});
     } else {
       setSelectedPlan(null);
+      setSelectedPlanId(null);
       setWeekStartDate("");
       setPlanSlots({});
     }
@@ -193,6 +197,7 @@ const MealPlanner = () => {
       await apiDeleteMealPlan(id);
       setMealPlans(prev => prev.filter(p => (p.id || p._id) !== id));
       if (selectedPlan && (selectedPlan.id === id || selectedPlan._id === id)) {
+        setSelectedPlanId(null);
         handleCancel();
       }
       showToast("Meal plan deleted.");
@@ -288,7 +293,7 @@ const MealPlanner = () => {
               return (
                 <div 
                   key={p.id || p._id} 
-                  className={`session-item ${selectedPlan?.id === p.id || selectedPlan?._id === p._id ? 'selected' : ''}`}
+                  className={`session-item ${selectedPlanId === (p.id || p._id) ? 'selected' : ''}`}
                   onClick={() => handleSelectPlan(p)}
                 >
                   <div className="session-item-body">
@@ -308,112 +313,111 @@ const MealPlanner = () => {
           )}
         </div>
         <div style={{ padding: '15px', borderTop: '1px solid var(--border)' }}>
-          <button className="btn btn-primary btn-full" onClick={startNewPlan}>
+          <button className={`btn btn-primary btn-full ${isCreating ? 'selected' : ''}`} onClick={startNewPlan}>
             + GENERATE NEW PLAN
           </button>
         </div>
       </div>
 
       {/* ── RIGHT COLUMN: Planner Detail ── */}
-      <div className="session-detail">
-        {/* ── MACRO GOAL BANNER (Always visible when a plan is active or creating) ── */}
-        {(isCreating || selectedPlan || isEditing) && (
-          <div style={{ 
-            background: 'var(--surface1)', 
-            borderBottom: '1px solid var(--border)', 
-            padding: '15px 20px',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '10px'
-          }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '12px', fontWeight: 'bold', letterSpacing: '1px', color: '#888' }}>DAILY TARGETS</span>
-            {!isEditingGoals ? (
-              <button className="btn btn-ghost btn-sm" onClick={() => setIsEditingGoals(true)} disabled={isViewingGrocery}>EDIT GOALS</button>
-            ) : (
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <button className="btn btn-ghost btn-sm" onClick={() => setIsEditingGoals(false)}>CANCEL</button>
-                <button className="btn btn-ghost btn-sm" onClick={handleSaveGoals} disabled={loading}>SAVE</button>
-              </div>
-            )}
-          </div>
-
+      <div className="session-detail" style={{ display: 'flex', flexDirection: 'column' }}>
+        {/* ── MACRO GOAL BANNER ── */}
+        <div style={{ 
+          background: 'var(--surface1)', 
+          borderBottom: '1px solid var(--border)', 
+          padding: '15px 20px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '10px',
+          flexShrink: 0
+        }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span style={{ fontSize: '12px', fontWeight: 'bold', letterSpacing: '1px', color: '#888' }}>DAILY TARGETS</span>
           {!isEditingGoals ? (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px' }}>
-              {/* Calories */}
-              <div className="stat-box" style={{ 
-                padding: '8px 12px', 
-                border: '1px solid #333', 
-                display: 'flex', 
-                justifyContent: 'space-between', 
-                alignItems: 'center' 
-              }}>
-                <div className="stat-val" style={{ fontSize: '2.2rem', fontWeight: 'bold', color: '#f5c518' }}>{goalCals}</div>
-                <div className="stat-label" style={{ fontSize: '0.7rem', textAlign: 'right', marginBottom: '0' }}>CALORIES</div>
-              </div>
-              {/* Protein */}
-              <div className="stat-box" style={{
-                padding: '8px 12px',
-                border: '1px solid #333', 
-                display: 'flex', 
-                justifyContent: 'space-between', 
-                alignItems: 'center' 
-              }}>
-                <div className="stat-val" style={{ fontSize: '2.2rem', fontWeight: 'bold', color: '#1E90FF' }}>{goalProt}g</div>
-                <div className="stat-label" style={{ fontSize: '0.7rem', textAlign: 'right', marginBottom: '0' }}>PROTEIN</div>
-              </div>
-              {/* Carbs */}
-              <div className="stat-box" style={{
-                padding: '8px 12px',
-                border: '1px solid #333', 
-                display: 'flex', 
-                justifyContent: 'space-between', 
-                alignItems: 'center' 
-              }}>
-                <div className="stat-val" style={{ fontSize: '2.2rem', fontWeight: 'bold', color: '#ff69b4' }}>{goalCarbs}g</div>
-                <div className="stat-label" style={{ fontSize: '0.7rem', textAlign: 'right', marginBottom: '0' }}>CARBS</div>
-              </div>
-              {/* Fat */}
-              <div className="stat-box" style={{
-                padding: '8px 12px',
-                border: '1px solid #333', 
-                display: 'flex', 
-                justifyContent: 'space-between', 
-                alignItems: 'center' 
-              }}>
-                <div className="stat-val" style={{ fontSize: '2.2rem', fontWeight: 'bold', color: '#32CD32' }}>{goalFat}g</div>
-                <div className="stat-label" style={{ fontSize: '0.7rem', textAlign: 'right', marginBottom: '0' }}>FAT</div>
-              </div>
-            </div>
+            <button className="btn btn-ghost btn-sm" onClick={() => setIsEditingGoals(true)} disabled={isViewingGrocery}>EDIT GOALS</button>
           ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '15px' }}>
-              <div className="form-row" style={{ marginBottom: 0 }}>
-                <label style={{ fontSize: '9px' }}>CALORIES</label>
-                <input type="number" className="input-base" style={{ padding: '5px' }} 
-                  value={goalCals} onChange={(e) => setGoalCals(e.target.value)} />
-              </div>
-              <div className="form-row" style={{ marginBottom: 0 }}>
-                <label style={{ fontSize: '9px' }}>PROTEIN (G)</label>
-                <input type="number" className="input-base" style={{ padding: '5px' }} 
-                  value={goalProt} onChange={(e) => setGoalProt(e.target.value)} />
-              </div>
-              <div className="form-row" style={{ marginBottom: 0 }}>
-                <label style={{ fontSize: '9px' }}>CARBS (G)</label>
-                <input type="number" className="input-base" style={{ padding: '5px' }} 
-                  value={goalCarbs} onChange={(e) => setGoalCarbs(e.target.value)} />
-              </div>
-              <div className="form-row" style={{ marginBottom: 0 }}>
-                <label style={{ fontSize: '9px' }}>FAT (G)</label>
-                <input type="number" className="input-base" style={{ padding: '5px' }} 
-                  value={goalFat} onChange={(e) => setGoalFat(e.target.value)} />
-              </div>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button className="btn btn-ghost btn-sm" onClick={() => setIsEditingGoals(false)}>CANCEL</button>
+              <button className="btn btn-ghost btn-sm" onClick={handleSaveGoals} disabled={loading}>SAVE</button>
             </div>
           )}
+        </div>
+
+        {!isEditingGoals ? (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px' }}>
+            {/* Calories */}
+            <div className="stat-box" style={{ 
+              padding: '8px 12px', 
+              border: '1px solid #333', 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              alignItems: 'center' 
+            }}>
+              <div className="stat-val" style={{ fontSize: '2.2rem', fontWeight: 'bold', color: '#f5c518' }}>{goalCals}</div>
+              <div className="stat-label" style={{ fontSize: '0.7rem', textAlign: 'right', marginBottom: '0' }}>CALORIES</div>
+            </div>
+            {/* Protein */}
+            <div className="stat-box" style={{
+              padding: '8px 12px',
+              border: '1px solid #333', 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              alignItems: 'center' 
+            }}>
+              <div className="stat-val" style={{ fontSize: '2.2rem', fontWeight: 'bold', color: '#1E90FF' }}>{goalProt}g</div>
+              <div className="stat-label" style={{ fontSize: '0.7rem', textAlign: 'right', marginBottom: '0' }}>PROTEIN</div>
+            </div>
+            {/* Carbs */}
+            <div className="stat-box" style={{
+              padding: '8px 12px',
+              border: '1px solid #333', 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              alignItems: 'center' 
+            }}>
+              <div className="stat-val" style={{ fontSize: '2.2rem', fontWeight: 'bold', color: '#ff69b4' }}>{goalCarbs}g</div>
+              <div className="stat-label" style={{ fontSize: '0.7rem', textAlign: 'right', marginBottom: '0' }}>CARBS</div>
+            </div>
+            {/* Fat */}
+            <div className="stat-box" style={{
+              padding: '8px 12px',
+              border: '1px solid #333', 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              alignItems: 'center' 
+            }}>
+              <div className="stat-val" style={{ fontSize: '2.2rem', fontWeight: 'bold', color: '#32CD32' }}>{goalFat}g</div>
+              <div className="stat-label" style={{ fontSize: '0.7rem', textAlign: 'right', marginBottom: '0' }}>FAT</div>
+            </div>
+          </div>
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '15px' }}>
+            <div className="form-row" style={{ marginBottom: 0 }}>
+              <label style={{ fontSize: '9px' }}>CALORIES</label>
+              <input type="number" className="input-base" style={{ padding: '5px' }} 
+                value={goalCals} onChange={(e) => setGoalCals(e.target.value)} />
+            </div>
+            <div className="form-row" style={{ marginBottom: 0 }}>
+              <label style={{ fontSize: '9px' }}>PROTEIN (G)</label>
+              <input type="number" className="input-base" style={{ padding: '5px' }} 
+                value={goalProt} onChange={(e) => setGoalProt(e.target.value)} />
+            </div>
+            <div className="form-row" style={{ marginBottom: 0 }}>
+              <label style={{ fontSize: '9px' }}>CARBS (G)</label>
+              <input type="number" className="input-base" style={{ padding: '5px' }} 
+                value={goalCarbs} onChange={(e) => setGoalCarbs(e.target.value)} />
+            </div>
+            <div className="form-row" style={{ marginBottom: 0 }}>
+              <label style={{ fontSize: '9px' }}>FAT (G)</label>
+              <input type="number" className="input-base" style={{ padding: '5px' }} 
+                value={goalFat} onChange={(e) => setGoalFat(e.target.value)} />
+            </div>
           </div>
         )}
+        </div>
 
         {isCreating || selectedPlan || isEditing ? (
-          <div className="meal-planner-layout" style={{ padding: '20px', overflowY: 'auto', height: '100%' }}>
+          <div className="meal-planner-layout" style={{ padding: '20px', overflowY: 'auto', flex: 1 }}>
             <div className="detail-header" style={{ marginBottom: '30px', borderBottom: '1px solid var(--border)', paddingBottom: '20px' }}>
               <div>
                 {isViewingGrocery ? (
