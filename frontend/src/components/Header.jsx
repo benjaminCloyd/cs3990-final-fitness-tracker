@@ -6,15 +6,16 @@ export default function Header({ activePanel, setPanel }) {
   const tabs = [
     { id: 'sessions', label: 'Sessions' },
     { id: 'progress', label: 'Progress' },
-    { id: 'recipes',  label: 'Recipes' },
-    { id: 'meal_plan',  label: 'Meal Plan' },
+    { id: 'recipes', label: 'Recipes' },
+    { id: 'meal_plan', label: 'Meal Plan' },
     ...(user?.role === 'admin' ? [{ id: 'admin', label: 'Users' }] : []),
   ];
 
   return (
     <header className="header">
-      <div className="header-logo">IRONLOG</div>
-
+      <div className="header-logo" style={{ cursor: 'pointer' }} onClick={() => setPanel('hub')}>
+        IRONLOG
+      </div>
       <nav className="nav-tabs">
         {tabs.map((t) => (
           <button

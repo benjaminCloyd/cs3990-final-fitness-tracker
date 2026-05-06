@@ -3,20 +3,22 @@ import { useAuth } from './context/AuthContext.jsx';
 import { useToast } from './context/ToastContext.jsx';
 import { apiGetSessions } from './api.js';
 
-import AuthOverlay   from './components/AuthOverlay.jsx';
-import Header        from './components/Header.jsx';
+import AuthOverlay from './components/AuthOverlay.jsx';
+import Header from './components/Header.jsx';
 import SessionsPanel from './components/SessionsPanel.jsx';
 import ProgressPanel from './components/ProgressPanel.jsx';
-import AdminPanel    from './components/AdminPanel.jsx';
-import Toast         from './components/Toast.jsx';
+import AdminPanel from './components/AdminPanel.jsx';
+import Toast from './components/Toast.jsx';
 import RecipeLibrary from './components/RecipeLibrary.jsx';
 import MealPlanner from './components/MealPlanner';
+import LandingPage from './components/LandingPage.jsx';
+
 
 export default function App() {
   const { user, loading, logout } = useAuth();
-  const { showToast }             = useToast();
+  const { showToast } = useToast();
 
-  const [panel,    setPanel]    = useState('sessions');
+  const [panel, setPanel] = useState('hub');
   const [sessions, setSessions] = useState([]);
 
   // Load sessions whenever a user logs in
@@ -52,6 +54,7 @@ export default function App() {
       <Header activePanel={panel} setPanel={setPanel} />
 
       <main className="app-main">
+        {panel === 'hub' && <LandingPage onSelect={setPanel} />}
         {panel === 'sessions' && (
           <SessionsPanel
             sessions={sessions}
@@ -65,12 +68,13 @@ export default function App() {
         {panel === 'recipes' && (
           <RecipeLibrary />
         )}
-        {panel === 'meal_plan'  && (
+        {panel === 'meal_plan' && (
           <MealPlanner />
         )}
         {panel === 'admin' && user.role === 'admin' && (
           <AdminPanel />
         )}
+
       </main>
 
       <Toast />

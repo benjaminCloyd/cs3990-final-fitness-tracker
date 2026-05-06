@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { apiGetRecipes, apiCreateMealPlan, apiGetMealPlans, apiUpdateMealPlan, apiDeleteMealPlan, apiUpdateProfile, apiGenerateGroceryList, apiGetLatestGrocery, apiToggleGroceryItem, apiDownloadGroceryList } from '../api.js'; 
+import { apiGetRecipes, apiCreateMealPlan, apiGetMealPlans, apiUpdateMealPlan, apiDeleteMealPlan, apiUpdateProfile, apiGenerateGroceryList, apiGetLatestGrocery, apiToggleGroceryItem, apiDownloadGroceryList } from '../api.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
 
@@ -9,13 +9,13 @@ const MEALS = ["Breakfast", "Lunch", "Dinner", "Snack"];
 const MealPlanner = () => {
   const { user, logout, refreshUser } = useAuth();
   const { showToast } = useToast();
-  
+
   const [recipes, setRecipes] = useState([]);
   const [mealPlans, setMealPlans] = useState([]);
   const [selectedPlan, setSelectedPlan] = useState(null);
   const [selectedPlanId, setSelectedPlanId] = useState(null);
   const [weekStartDate, setWeekStartDate] = useState("");
-  const [planSlots, setPlanSlots] = useState({}); 
+  const [planSlots, setPlanSlots] = useState({});
   const [loading, setLoading] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -28,6 +28,8 @@ const MealPlanner = () => {
   const [goalProt, setGoalProt] = useState(user?.macro_targets?.protein || 150);
   const [goalCarbs, setGoalCarbs] = useState(user?.macro_targets?.carbs || 250);
   const [goalFat, setGoalFat] = useState(user?.macro_targets?.fat || 70);
+  const macroCalsTotal = (parseFloat(goalProt) || 0) * 4 + (parseFloat(goalCarbs) || 0) * 4 + (parseFloat(goalFat) || 0) * 9;
+  const macroOverBudget = (parseFloat(goalCals) || 0) > 0 && macroCalsTotal > (parseFloat(goalCals) || 0);
 
   useEffect(() => {
     const fetchRecipes = async () => {
@@ -291,8 +293,8 @@ const MealPlanner = () => {
             mealPlans.map((p) => {
               const { year, monthDay } = formatDate(p.week_start_date);
               return (
-                <div 
-                  key={p.id || p._id} 
+                <div
+                  key={p.id || p._id}
                   className={`session-item ${selectedPlanId === (p.id || p._id) ? 'selected' : ''}`}
                   onClick={() => handleSelectPlan(p)}
                 >
@@ -301,7 +303,7 @@ const MealPlanner = () => {
                     <div className="s-name">{monthDay}</div>
                     <div className="s-meta">{Object.keys(p.slots || {}).length} Meals</div>
                   </div>
-                  <button 
+                  <button
                     className="btn-danger del-btn"
                     onClick={(e) => handleDeletePlan(p.id || p._id, e)}
                   >
@@ -322,98 +324,125 @@ const MealPlanner = () => {
       {/* ── RIGHT COLUMN: Planner Detail ── */}
       <div className="session-detail" style={{ display: 'flex', flexDirection: 'column' }}>
         {/* ── MACRO GOAL BANNER ── */}
-        <div style={{ 
-          background: 'var(--surface1)', 
-          borderBottom: '1px solid var(--border)', 
+        <div style={{
+          background: 'var(--surface1)',
+          borderBottom: '1px solid var(--border)',
           padding: '15px 20px',
           display: 'flex',
           flexDirection: 'column',
           gap: '10px',
           flexShrink: 0
         }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span style={{ fontSize: '12px', fontWeight: 'bold', letterSpacing: '1px', color: '#888' }}>DAILY TARGETS</span>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: '12px', fontWeight: 'bold', letterSpacing: '1px', color: '#888' }}>DAILY TARGETS</span>
+            {!isEditingGoals ? (
+              <button className="btn btn-ghost btn-sm" onClick={() => setIsEditingGoals(true)} disabled={isViewingGrocery}>EDIT GOALS</button>
+            ) : (
+              <div style={{ display: 'flex', gap: '24px', alignItems: 'center' }}>
+                {/* Inputs */}
+                <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                  <div className="form-row" style={{ marginBottom: 0 }}>
+                    <label style={{ fontSize: '9px' }}>CALORIES</label>
+                    <input type="number" className="input-base" style={{ padding: '5px' }}
+                      value={goalCals} onChange={(e) => setGoalCals(e.target.value)} />
+                  </div>
+                  <div className="form-row" style={{ marginBottom: 0 }}>
+                    <label style={{ fontSize: '9px' }}>PROTEIN (G)</label>
+                    <input type="number" className="input-base" style={{ padding: '5px' }}
+                      value={goalProt} onChange={(e) => setGoalProt(e.target.value)} />
+                  </div>
+                  <div className="form-row" style={{ marginBottom: 0 }}>
+                    <label style={{ fontSize: '9px' }}>CARBS (G)</label>
+                    <input type="number" className="input-base" style={{ padding: '5px' }}
+                      value={goalCarbs} onChange={(e) => setGoalCarbs(e.target.value)} />
+                  </div>
+                  <div className="form-row" style={{ marginBottom: 0 }}>
+                    <label style={{ fontSize: '9px' }}>FAT (G)</label>
+                    <input type="number" className="input-base" style={{ padding: '5px' }}
+                      value={goalFat} onChange={(e) => setGoalFat(e.target.value)} />
+                  </div>
+                </div>
+
+                {/* Pie chart */}
+                <MacroRing
+                  goalCals={goalCals} goalProt={goalProt}
+                  goalCarbs={goalCarbs} goalFat={goalFat}
+                />
+              </div>
+            )}
+          </div>
+
           {!isEditingGoals ? (
-            <button className="btn btn-ghost btn-sm" onClick={() => setIsEditingGoals(true)} disabled={isViewingGrocery}>EDIT GOALS</button>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px' }}>
+              {/* Calories */}
+              <div className="stat-box" style={{
+                padding: '8px 12px',
+                border: '1px solid #333',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center'
+              }}>
+                <div className="stat-val" style={{ fontSize: '2.2rem', fontWeight: 'bold', color: '#f5c518' }}>{goalCals}</div>
+                <div className="stat-label" style={{ fontSize: '0.7rem', textAlign: 'right', marginBottom: '0' }}>CALORIES</div>
+              </div>
+              {/* Protein */}
+              <div className="stat-box" style={{
+                padding: '8px 12px',
+                border: '1px solid #333',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center'
+              }}>
+                <div className="stat-val" style={{ fontSize: '2.2rem', fontWeight: 'bold', color: '#1E90FF' }}>{goalProt}g</div>
+                <div className="stat-label" style={{ fontSize: '0.7rem', textAlign: 'right', marginBottom: '0' }}>PROTEIN</div>
+              </div>
+              {/* Carbs */}
+              <div className="stat-box" style={{
+                padding: '8px 12px',
+                border: '1px solid #333',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center'
+              }}>
+                <div className="stat-val" style={{ fontSize: '2.2rem', fontWeight: 'bold', color: '#ff69b4' }}>{goalCarbs}g</div>
+                <div className="stat-label" style={{ fontSize: '0.7rem', textAlign: 'right', marginBottom: '0' }}>CARBS</div>
+              </div>
+              {/* Fat */}
+              <div className="stat-box" style={{
+                padding: '8px 12px',
+                border: '1px solid #333',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center'
+              }}>
+                <div className="stat-val" style={{ fontSize: '2.2rem', fontWeight: 'bold', color: '#32CD32' }}>{goalFat}g</div>
+                <div className="stat-label" style={{ fontSize: '0.7rem', textAlign: 'right', marginBottom: '0' }}>FAT</div>
+              </div>
+            </div>
           ) : (
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <button className="btn btn-ghost btn-sm" onClick={() => setIsEditingGoals(false)}>CANCEL</button>
-              <button className="btn btn-ghost btn-sm" onClick={handleSaveGoals} disabled={loading}>SAVE</button>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '15px' }}>
+              <div className="form-row" style={{ marginBottom: 0 }}>
+                <label style={{ fontSize: '9px' }}>CALORIES</label>
+                <input type="number" className="input-base" style={{ padding: '5px' }}
+                  value={goalCals} onChange={(e) => setGoalCals(e.target.value)} />
+              </div>
+              <div className="form-row" style={{ marginBottom: 0 }}>
+                <label style={{ fontSize: '9px' }}>PROTEIN (G)</label>
+                <input type="number" className="input-base" style={{ padding: '5px' }}
+                  value={goalProt} onChange={(e) => setGoalProt(e.target.value)} />
+              </div>
+              <div className="form-row" style={{ marginBottom: 0 }}>
+                <label style={{ fontSize: '9px' }}>CARBS (G)</label>
+                <input type="number" className="input-base" style={{ padding: '5px' }}
+                  value={goalCarbs} onChange={(e) => setGoalCarbs(e.target.value)} />
+              </div>
+              <div className="form-row" style={{ marginBottom: 0 }}>
+                <label style={{ fontSize: '9px' }}>FAT (G)</label>
+                <input type="number" className="input-base" style={{ padding: '5px' }}
+                  value={goalFat} onChange={(e) => setGoalFat(e.target.value)} />
+              </div>
             </div>
           )}
-        </div>
-
-        {!isEditingGoals ? (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px' }}>
-            {/* Calories */}
-            <div className="stat-box" style={{ 
-              padding: '8px 12px', 
-              border: '1px solid #333', 
-              display: 'flex', 
-              justifyContent: 'space-between', 
-              alignItems: 'center' 
-            }}>
-              <div className="stat-val" style={{ fontSize: '2.2rem', fontWeight: 'bold', color: '#f5c518' }}>{goalCals}</div>
-              <div className="stat-label" style={{ fontSize: '0.7rem', textAlign: 'right', marginBottom: '0' }}>CALORIES</div>
-            </div>
-            {/* Protein */}
-            <div className="stat-box" style={{
-              padding: '8px 12px',
-              border: '1px solid #333', 
-              display: 'flex', 
-              justifyContent: 'space-between', 
-              alignItems: 'center' 
-            }}>
-              <div className="stat-val" style={{ fontSize: '2.2rem', fontWeight: 'bold', color: '#1E90FF' }}>{goalProt}g</div>
-              <div className="stat-label" style={{ fontSize: '0.7rem', textAlign: 'right', marginBottom: '0' }}>PROTEIN</div>
-            </div>
-            {/* Carbs */}
-            <div className="stat-box" style={{
-              padding: '8px 12px',
-              border: '1px solid #333', 
-              display: 'flex', 
-              justifyContent: 'space-between', 
-              alignItems: 'center' 
-            }}>
-              <div className="stat-val" style={{ fontSize: '2.2rem', fontWeight: 'bold', color: '#ff69b4' }}>{goalCarbs}g</div>
-              <div className="stat-label" style={{ fontSize: '0.7rem', textAlign: 'right', marginBottom: '0' }}>CARBS</div>
-            </div>
-            {/* Fat */}
-            <div className="stat-box" style={{
-              padding: '8px 12px',
-              border: '1px solid #333', 
-              display: 'flex', 
-              justifyContent: 'space-between', 
-              alignItems: 'center' 
-            }}>
-              <div className="stat-val" style={{ fontSize: '2.2rem', fontWeight: 'bold', color: '#32CD32' }}>{goalFat}g</div>
-              <div className="stat-label" style={{ fontSize: '0.7rem', textAlign: 'right', marginBottom: '0' }}>FAT</div>
-            </div>
-          </div>
-        ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '15px' }}>
-            <div className="form-row" style={{ marginBottom: 0 }}>
-              <label style={{ fontSize: '9px' }}>CALORIES</label>
-              <input type="number" className="input-base" style={{ padding: '5px' }} 
-                value={goalCals} onChange={(e) => setGoalCals(e.target.value)} />
-            </div>
-            <div className="form-row" style={{ marginBottom: 0 }}>
-              <label style={{ fontSize: '9px' }}>PROTEIN (G)</label>
-              <input type="number" className="input-base" style={{ padding: '5px' }} 
-                value={goalProt} onChange={(e) => setGoalProt(e.target.value)} />
-            </div>
-            <div className="form-row" style={{ marginBottom: 0 }}>
-              <label style={{ fontSize: '9px' }}>CARBS (G)</label>
-              <input type="number" className="input-base" style={{ padding: '5px' }} 
-                value={goalCarbs} onChange={(e) => setGoalCarbs(e.target.value)} />
-            </div>
-            <div className="form-row" style={{ marginBottom: 0 }}>
-              <label style={{ fontSize: '9px' }}>FAT (G)</label>
-              <input type="number" className="input-base" style={{ padding: '5px' }} 
-                value={goalFat} onChange={(e) => setGoalFat(e.target.value)} />
-            </div>
-          </div>
-        )}
         </div>
 
         {isCreating || selectedPlan || isEditing ? (
@@ -429,9 +458,9 @@ const MealPlanner = () => {
                     </h1>
                     <div className="form-row" style={{ marginTop: '10px' }}>
                       <label>WEEK START DATE</label>
-                      <input 
-                        type="date" 
-                        className="input-base" 
+                      <input
+                        type="date"
+                        className="input-base"
                         style={{ width: 'auto', background: '#1a1a1a', color: 'white', border: '1px solid #333', padding: '8px' }}
                         value={weekStartDate}
                         disabled={!isCreating && !isEditing}
@@ -444,9 +473,9 @@ const MealPlanner = () => {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', alignItems: 'flex-end' }}>
                 {isViewingGrocery ? (
                   <div style={{ display: 'flex', gap: '10px' }}>
-                    <button 
-                      className="btn btn-primary" 
-                      onClick={handleDownloadList} 
+                    <button
+                      className="btn btn-primary"
+                      onClick={handleDownloadList}
                       disabled={loading}
                     >DOWNLOAD LIST</button>
                     <button className="btn btn-ghost" onClick={() => setIsViewingGrocery(false)}>BACK TO PLAN</button>
@@ -458,10 +487,10 @@ const MealPlanner = () => {
                         <button className="btn btn-primary" onClick={() => setIsEditing(true)}>EDIT</button>
                       )}
                       {(isCreating || isEditing) && (
-                        <button 
-                          className="btn btn-primary" 
-                          onClick={isCreating ? handleSavePlan : handleSaveUpdate} 
-                          disabled={loading}
+                        <button
+                          className="btn btn-primary"
+                          onClick={isCreating ? handleSavePlan : handleSaveUpdate}
+                          disabled={loading || macroOverBudget}
                         >
                           {loading ? "SAVING..." : "SAVE PLAN"}
                         </button>
@@ -479,15 +508,15 @@ const MealPlanner = () => {
             {isViewingGrocery && groceryList ? (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '15px' }}>
                 {groceryList.items.map((item, idx) => (
-                  <div 
-                    key={idx} 
+                  <div
+                    key={idx}
                     onClick={() => handleToggleItem(idx)}
-                    style={{ 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      gap: '15px', 
-                      padding: '15px', 
-                      background: 'var(--surface2)', 
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '15px',
+                      padding: '15px',
+                      background: 'var(--surface2)',
                       border: '1px solid var(--border)',
                       borderRadius: '4px',
                       cursor: 'pointer',
@@ -519,11 +548,11 @@ const MealPlanner = () => {
                   return (
                     <div key={day} className="exercise-card" style={{ padding: '20px', background: 'var(--surface2)' }}>
                       <h3 style={{ color: 'var(--green)', borderBottom: '1px solid #333', paddingBottom: '10px', marginBottom: '15px' }}>{day.toUpperCase()}</h3>
-                      
+
                       {MEALS.map(meal => (
                         <div key={meal} style={{ marginBottom: '15px' }}>
                           <label style={{ display: 'block', fontSize: '10px', color: '#888', marginBottom: '5px' }}>{meal.toUpperCase()}</label>
-                          <select 
+                          <select
                             className="input-base"
                             style={{ width: '100%', background: '#111', border: '1px solid #333', color: 'white' }}
                             value={planSlots[`${day}_${meal}`] || ""}
@@ -546,11 +575,11 @@ const MealPlanner = () => {
                               <span>{totals.calories.toFixed(0)} / {targets.calories}</span>
                             </div>
                             <div style={{ width: '100%', height: '5px', background: '#333', borderRadius: '2px', marginTop: '4px' }}>
-                              <div style={{ 
-                                width: `${Math.min(100, targets.calories === 0 ? (totals.calories > 0 ? 100 : 0) : (totals.calories / targets.calories) * 100)}%`, 
-                                height: '100%', 
-                                background: totals.calories > targets.calories ? '#ff4444' : '#f5c518', 
-                                borderRadius: '2px' 
+                              <div style={{
+                                width: `${Math.min(100, targets.calories === 0 ? (totals.calories > 0 ? 100 : 0) : (totals.calories / targets.calories) * 100)}%`,
+                                height: '100%',
+                                background: totals.calories > targets.calories ? '#ff4444' : '#f5c518',
+                                borderRadius: '2px'
                               }}></div>
                             </div>
                           </div>
@@ -561,11 +590,11 @@ const MealPlanner = () => {
                               <span>{totals.protein.toFixed(0)}g / {targets.protein}g</span>
                             </div>
                             <div style={{ width: '100%', height: '5px', background: '#333', borderRadius: '2px', marginTop: '4px' }}>
-                              <div style={{ 
-                                width: `${Math.min(100, targets.protein === 0 ? (totals.protein > 0 ? 100 : 0) : (totals.protein / targets.protein) * 100)}%`, 
-                                height: '100%', 
-                                background: totals.protein > targets.protein ? '#ff4444' : '#1E90FF', 
-                                borderRadius: '2px' 
+                              <div style={{
+                                width: `${Math.min(100, targets.protein === 0 ? (totals.protein > 0 ? 100 : 0) : (totals.protein / targets.protein) * 100)}%`,
+                                height: '100%',
+                                background: totals.protein > targets.protein ? '#ff4444' : '#1E90FF',
+                                borderRadius: '2px'
                               }}></div>
                             </div>
                           </div>
@@ -576,11 +605,11 @@ const MealPlanner = () => {
                               <span>{totals.carbs.toFixed(0)}g / {targets.carbs}g</span>
                             </div>
                             <div style={{ width: '100%', height: '5px', background: '#333', borderRadius: '2px', marginTop: '4px' }}>
-                              <div style={{ 
-                                width: `${Math.min(100, targets.carbs === 0 ? (totals.carbs > 0 ? 100 : 0) : (totals.carbs / targets.carbs) * 100)}%`, 
-                                height: '100%', 
-                                background: totals.carbs > targets.carbs ? '#ff4444' : '#ff69b4', 
-                                borderRadius: '2px' 
+                              <div style={{
+                                width: `${Math.min(100, targets.carbs === 0 ? (totals.carbs > 0 ? 100 : 0) : (totals.carbs / targets.carbs) * 100)}%`,
+                                height: '100%',
+                                background: totals.carbs > targets.carbs ? '#ff4444' : '#ff69b4',
+                                borderRadius: '2px'
                               }}></div>
                             </div>
                           </div>
@@ -591,11 +620,11 @@ const MealPlanner = () => {
                               <span>{totals.fat.toFixed(0)}g / {targets.fat}g</span>
                             </div>
                             <div style={{ width: '100%', height: '5px', background: '#333', borderRadius: '2px', marginTop: '4px' }}>
-                              <div style={{ 
-                                width: `${Math.min(100, targets.fat === 0 ? (totals.fat > 0 ? 100 : 0) : (totals.fat / targets.fat) * 100)}%`, 
-                                height: '100%', 
-                                background: totals.fat > targets.fat ? '#ff4444' : '#32CD32', 
-                                borderRadius: '2px' 
+                              <div style={{
+                                width: `${Math.min(100, targets.fat === 0 ? (totals.fat > 0 ? 100 : 0) : (totals.fat / targets.fat) * 100)}%`,
+                                height: '100%',
+                                background: totals.fat > targets.fat ? '#ff4444' : '#32CD32',
+                                borderRadius: '2px'
                               }}></div>
                             </div>
                           </div>
@@ -618,3 +647,78 @@ const MealPlanner = () => {
 };
 
 export default MealPlanner;
+
+
+
+function MacroRing({ goalCals, goalProt, goalCarbs, goalFat }) {
+  const cals = parseFloat(goalCals) || 0;
+  const prot = parseFloat(goalProt) || 0;
+  const carbs = parseFloat(goalCarbs) || 0;
+  const fat = parseFloat(goalFat) || 0;
+
+  const protCal = prot * 4;
+  const carbCal = carbs * 4;
+  const fatCal = fat * 9;
+  const totalMacroCal = protCal + carbCal + fatCal;
+  const overBudget = cals > 0 && totalMacroCal > cals;
+
+  const SIZE = 160, cx = 80, cy = 80, R = 58, SW = 22;
+  const circ = 2 * Math.PI * R;
+
+  const segs = [
+    { value: protCal, color: '#1E90FF', label: 'PRO' },
+    { value: carbCal, color: '#ff69b4', label: 'CHO' },
+    { value: fatCal, color: '#32CD32', label: 'FAT' },
+  ];
+
+  let acc = 0;
+  const arcs = totalMacroCal > 0 ? segs.map(seg => {
+    const frac = seg.value / totalMacroCal;
+    const dash = frac * circ;
+    const gap = circ - dash;
+    const rot = (acc / totalMacroCal) * 360 - 90;
+    acc += seg.value;
+    return { ...seg, dash, gap, rot, pct: Math.round(frac * 100) };
+  }) : [];
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', minWidth: '160px' }}>
+      <svg width={SIZE} height={SIZE} viewBox="0 0 160 160">
+        <circle cx={cx} cy={cy} r={R} fill="none" stroke="#1a1a1a" strokeWidth={SW} />
+        {arcs.map((a, i) => (
+          <circle key={i} cx={cx} cy={cy} r={R}
+            fill="none" stroke={a.color} strokeWidth={SW}
+            strokeDasharray={`${a.dash} ${a.gap}`}
+            transform={`rotate(${a.rot} ${cx} ${cy})`}
+          />
+        ))}
+        <text x={cx} y={cy - 7} textAnchor="middle"
+          fill={overBudget ? '#ff4444' : '#f5c518'}
+          style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: '22px' }}>
+          {totalMacroCal.toFixed(0)}
+        </text>
+        <text x={cx} y={cy + 10} textAnchor="middle"
+          fill="#555"
+          style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '9px' }}>
+          of {cals} kcal
+        </text>
+      </svg>
+
+      {/* Legend */}
+      <div style={{ display: 'flex', gap: '10px', fontSize: '9px', fontFamily: 'JetBrains Mono, monospace' }}>
+        {arcs.map((a, i) => (
+          <span key={i} style={{ color: a.color, display: 'flex', alignItems: 'center', gap: '3px' }}>
+            <span style={{ width: 6, height: 6, background: a.color, borderRadius: '50%', display: 'inline-block' }} />
+            {a.label} {a.pct}%
+          </span>
+        ))}
+      </div>
+
+      {overBudget && (
+        <div style={{ color: '#ff4444', fontSize: '9px', fontFamily: 'JetBrains Mono, monospace', letterSpacing: '1px', textAlign: 'center' }}>
+          ⚠ MACROS EXCEED CALORIE GOAL
+        </div>
+      )}
+    </div>
+  );
+}
