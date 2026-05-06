@@ -11,6 +11,19 @@ function authHeaders() {
   };
 }
 
+async function apiFetchFile(url, options = {}) {
+  const res = await fetch(url, {
+    ...options,
+    headers: { ...authHeaders(), ...(options.headers || {}) },
+  });
+
+  if (res.status === 401 || res.status === 403) {
+    throw Object.assign(new Error('UNAUTHORIZED'), { status: res.status });
+  }
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.blob(); // Return the response as a Blob for file downloads
+}
+
 async function apiFetch(url, options = {}) {
   const res = await fetch(url, {
     ...options,
@@ -68,6 +81,7 @@ export async function apiSignup(username, password) {
 }
 
 export const apiMe = () => apiFetch(`${ABASE}/me`);
+export const apiUpdateProfile = (data) => apiFetch(`${ABASE}/update`, { method: 'PUT', body: JSON.stringify(data) });
 
 // ── sessions ──────────────────────────────────────────────────────────────────
 
@@ -110,7 +124,6 @@ export const apiUploadRecipeImage = async (file) => {
     body: formData,
     headers: {
       Authorization: `Bearer ${token}`,
-      // Don't set Content-Type for FormData
     },
   });
 
@@ -143,3 +156,13 @@ export const apiSearchUSDA = (query) => apiFetch(`${RBASE}/search-nutrients?quer
 // Grocery Lists
 export const apiGenerateGroceryList = (planId) => apiFetch(`${RBASE}/meal-plans/${planId}/generate-grocery-list`, { method: 'POST' });
 export const apiGetLatestGrocery = () => apiFetch(`${RBASE}/grocery-lists/latest`);
+export const apiDownloadGroceryList = (listId) => apiFetchFile(`${RBASE}/grocery-lists/download/${listId}`);
+export const apiToggleGroceryItem = (listId, idx) => apiFetch(`${RBASE}/grocery-lists/${listId}/toggle/${idx}`, { method: 'PUT' });
+
+// ── meal plans ───────────────────────────────────────────────────────────────
+
+export const apiGetMealPlans = () => apiFetch(`${RBASE}/meal-plans/all`);
+export const apiCreateMealPlan = (data) => apiFetch(`${RBASE}/meal-plans`, { method: 'POST', body: JSON.stringify(data) });
+export const apiUpdateMealPlan = (id, data) => apiFetch(`${RBASE}/meal-plans/${id}`, { method: 'PUT', body: JSON.stringify(data) });
+export const apiDeleteMealPlan = (id) => apiFetch(`${RBASE}/meal-plans/${id}`, { method: 'DELETE' });
+export const apiGetMealPlanMacros = (planId) => apiFetch(`${RBASE}/meal-plans/macros/${planId}`);

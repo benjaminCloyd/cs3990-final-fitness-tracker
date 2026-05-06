@@ -7,7 +7,7 @@ export default function Header({ activePanel, setPanel }) {
     { id: 'sessions', label: 'Sessions' },
     { id: 'progress', label: 'Progress' },
     { id: 'recipes',  label: 'Recipes' },
-    { id: 'grocery',  label: 'Meal Plan' },
+    { id: 'meal_plan',  label: 'Meal Plan' },
     ...(user?.role === 'admin' ? [{ id: 'admin', label: 'Users' }] : []),
   ];
 

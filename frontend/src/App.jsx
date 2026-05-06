@@ -10,6 +10,7 @@ import ProgressPanel from './components/ProgressPanel.jsx';
 import AdminPanel    from './components/AdminPanel.jsx';
 import Toast         from './components/Toast.jsx';
 import RecipeLibrary from './components/RecipeLibrary.jsx';
+import MealPlanner from './components/MealPlanner';
 
 export default function App() {
   const { user, loading, logout } = useAuth();
@@ -63,6 +64,9 @@ export default function App() {
         )}
         {panel === 'recipes' && (
           <RecipeLibrary />
+        )}
+        {panel === 'meal_plan'  && (
+          <MealPlanner />
         )}
         {panel === 'admin' && user.role === 'admin' && (
           <AdminPanel />

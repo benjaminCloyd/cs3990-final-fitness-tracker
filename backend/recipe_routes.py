@@ -51,6 +51,21 @@ async def get_recipe_or_404(recipe_id: str, user: TokenData) -> Recipe:
     return recipe
 
 
+def _sort_meal_plans(plans: List[MealPlan]) -> List[MealPlan]:
+    """Sort meal plans by date (YYYY-MM-DD or MM/DD/YYYY) in descending order."""
+    def key(p: MealPlan):
+        try:
+            # Handle YYYY-MM-DD from HTML5 date picker or legacy MM/DD/YYYY
+            if "-" in p.week_start_date:
+                y, m, d = p.week_start_date.split("-")
+                return (int(y), int(m), int(d))
+            m, d, y = p.week_start_date.split("/")
+            return (int(y), int(m), int(d))
+        except Exception:
+            return (0, 0, 0)
+    return sorted(plans, key=key, reverse=True)
+
+
 # ── usda search ───────────────────────────────────────────────────────────────
 
 
@@ -175,8 +190,10 @@ async def upload_recipe_image(file: UploadFile = File(...), user: TokenData = De
 async def list_meal_plans(user: TokenData = Depends(authenticate)):
     """Retrieve all meal plans for the user (or all plans for admins)."""
     if user.role == "admin":
-        return await MealPlan.find_all().to_list()
-    return await MealPlan.find(MealPlan.owner == user.username).to_list()
+        plans = await MealPlan.find_all().to_list()
+    else:
+        plans = await MealPlan.find(MealPlan.owner == user.username).to_list()
+    return _sort_meal_plans(plans)
 
 
 @recipe_router.post("/meal-plans")
@@ -189,6 +206,48 @@ async def create_meal_plan(body: MealPlanRequest, user: TokenData = Depends(auth
     )
     await plan.create()
     return plan
+
+
+@recipe_router.put("/meal-plans/{plan_id}", response_model=MealPlan)
+async def update_meal_plan(plan_id: str, body: MealPlanRequest, user: TokenData = Depends(authenticate)):
+    """Update an existing meal plan's date or assigned recipes."""
+    try:
+        oid = PydanticObjectId(plan_id)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid plan ID format.")
+    
+    plan = await MealPlan.get(oid)
+    if not plan:
+        raise HTTPException(status_code=404, detail="Meal plan not found.")
+    
+    if user.role != "admin" and plan.owner != user.username:
+        raise HTTPException(status_code=403, detail="Not authorized to update this plan.")
+    
+    plan.week_start_date = body.week_start_date
+    plan.slots = body.slots
+    await plan.save()
+    log_event("Meal Plan Updated", f"Meal plan for {plan.week_start_date} updated by {user.username}")
+    return plan
+
+
+@recipe_router.delete("/meal-plans/{plan_id}")
+async def delete_meal_plan(plan_id: str, user: TokenData = Depends(authenticate)):
+    """Permanently remove a meal plan from the user's history."""
+    try:
+        oid = PydanticObjectId(plan_id)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid plan ID format.")
+    
+    plan = await MealPlan.get(oid)
+    if not plan:
+        raise HTTPException(status_code=404, detail="Meal plan not found.")
+    
+    if user.role != "admin" and plan.owner != user.username:
+        raise HTTPException(status_code=403, detail="Not authorized to delete this plan.")
+    
+    await plan.delete()
+    log_event("Meal Plan Deleted", f"Meal plan for {plan.week_start_date} deleted by {user.username}")
+    return {"message": "Meal plan deleted successfully"}
 
 
 @recipe_router.get("/meal-plans/macros/{plan_id}")
@@ -252,11 +311,64 @@ async def generate_grocery_list(plan_id: str, user: TokenData = Depends(authenti
         
     consolidated = []
     for name, quantities in ingredients_map.items():
-        consolidated.append(Ingredient(name=name, quantity=", ".join(quantities)))
+        total = 0.0
+        unit = ""
+        can_sum = True
+        
+        for q in quantities:
+            # Attempt to separate number from unit (e.g., "100 g")
+            parts = q.strip().split()
+            try:
+                if not parts: continue
+                val = float(parts[0])
+                u = " ".join(parts[1:]) if len(parts) > 1 else ""
+                if unit == "": unit = u
+                elif unit != u:
+                    can_sum = False # Different units, cannot sum reliably
+                    break
+                total += val
+            except (ValueError, IndexError):
+                can_sum = False
+                break
+        
+        if can_sum and total > 0:
+            q_str = f"{int(total) if total.is_integer() else total} {unit if unit else 'g'}".strip()
+            consolidated.append(Ingredient(name=name, quantity=q_str))
+        else:
+            consolidated.append(Ingredient(name=name, quantity=", ".join(quantities)))
     
     gl = GroceryList(owner=user.username, items=consolidated, is_checked=[False]*len(consolidated))
     await gl.create()
     return gl
+
+
+@recipe_router.get("/grocery-lists/latest", response_model=Optional[GroceryList])
+async def get_latest_grocery_list(user: TokenData = Depends(authenticate)):
+    """Retrieve the most recently generated grocery list for the user."""
+    lists = await GroceryList.find(GroceryList.owner == user.username).sort("-id").to_list()
+    return lists[0] if lists else None
+
+
+@recipe_router.put("/grocery-lists/{list_id}/toggle/{item_idx}")
+async def toggle_grocery_item(list_id: str, item_idx: int, user: TokenData = Depends(authenticate)):
+    """Toggle the checked status of a specific ingredient in the list."""
+    try:
+        oid = PydanticObjectId(list_id)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid ID.")
+    
+    gl = await GroceryList.get(oid)
+    if not gl or gl.owner != user.username:
+        raise HTTPException(status_code=404, detail="List not found.")
+    
+    if item_idx < 0 or item_idx >= len(gl.is_checked):
+        raise HTTPException(status_code=400, detail="Invalid item index.")
+    
+    # Toggle boolean
+    gl.is_checked[item_idx] = not gl.is_checked[item_idx]
+    # Beanie requires explicit save for array modifications in some versions
+    await gl.save()
+    return {"is_checked": gl.is_checked[item_idx]}
 
 
 @recipe_router.get("/grocery-lists/download/{list_id}")

@@ -216,6 +216,7 @@ __marimo__/
 .streamlit/secrets.toml
 
 node_modules/
-backend/testing/
+backend/test*.py
+backend/smoke_test.py
 images/
 uploads/
