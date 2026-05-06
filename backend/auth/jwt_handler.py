@@ -37,13 +37,12 @@ def verify_access_token(token: str) -> TokenData | None:
             )
 
         exp_datetime = datetime.fromtimestamp(exp, tz=timezone.utc)
-        if datetime.now(timezone.utc) > exp_datetime:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN, detail="Token expired!"
-            )
-
         return TokenData(username=username, role=role, exp_datetime=exp_datetime)
 
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Token expired!"
+        )
     except jwt.InvalidTokenError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token"
