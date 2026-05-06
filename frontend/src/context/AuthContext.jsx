@@ -4,7 +4,7 @@ import { apiMe } from '../api.js';
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
-  const [user, setUser]     = useState(null);   // { username, role } | null
+  const [user, setUser]     = useState(null);   // Full UserResponse | null
   const [loading, setLoading] = useState(true); // verifying stored token on mount
 
   // Restore session from localStorage on first render
@@ -20,7 +20,7 @@ export function AuthProvider({ children }) {
       .then((me) => {
         // Refresh role in case it changed since last login
         saveAuth(token, me.username, me.role);
-        setUser({ username: me.username, role: me.role });
+        setUser(me);
       })
       .catch(() => {
         clearAuth();
@@ -28,9 +28,20 @@ export function AuthProvider({ children }) {
       .finally(() => setLoading(false));
   }, []);
 
-  const login = useCallback((token, username, role) => {
+  const login = useCallback(async (token, username, role) => {
     saveAuth(token, username, role);
-    setUser({ username, role });
+    // Fetch full profile immediately after login to get macro targets
+    try {
+      const me = await apiMe();
+      setUser(me);
+    } catch {
+      setUser({ username, role });
+    }
+  }, []);
+
+  const refreshUser = useCallback(async () => {
+    const me = await apiMe();
+    setUser(me);
   }, []);
 
   const logout = useCallback(() => {
@@ -39,7 +50,7 @@ export function AuthProvider({ children }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, logout, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );

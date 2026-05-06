@@ -244,6 +244,33 @@ body {
   overflow: hidden;
 }
 
+/* ── Recipes three-column layout ── */
+.recipes-layout {
+  display: flex;
+  width: 100%;
+  overflow: hidden;
+}
+
+.recipes-create-column {
+  width: 320px;
+  min-width: 320px;
+  border-right: 2px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.recipes-list-column {
+  width: 280px;
+  min-width: 280px;
+  border-right: 2px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  overflow: hidden;
+}
+
 .sessions-sidebar {
   width: 380px;
   min-width: 380px;

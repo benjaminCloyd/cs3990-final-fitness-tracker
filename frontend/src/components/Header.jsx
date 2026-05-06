@@ -6,6 +6,8 @@ export default function Header({ activePanel, setPanel }) {
   const tabs = [
     { id: 'sessions', label: 'Sessions' },
     { id: 'progress', label: 'Progress' },
+    { id: 'recipes',  label: 'Recipes' },
+    { id: 'meal_plan',  label: 'Meal Plan' },
     ...(user?.role === 'admin' ? [{ id: 'admin', label: 'Users' }] : []),
   ];
 
