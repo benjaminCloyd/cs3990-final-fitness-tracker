@@ -11,13 +11,13 @@ from datetime import datetime, timedelta, timezone
 from fastapi import HTTPException
 
 class BadSettings:
-    SECRET_KEY = "wrong_secret"
+    SECRET_KEY = "wrong_secret_key_but_long_enough_to_be_secure_32_bytes"
 
 @pytest.fixture(autouse=True)
 def mock_settings(monkeypatch):
     from backend.auth import jwt_handler
     class GoodSettings:
-        SECRET_KEY = "test_secret"
+        SECRET_KEY = "test_secret_key_with_at_least_32_bytes_of_length"
     monkeypatch.setattr(jwt_handler, "get_settings", lambda: GoodSettings())
 
 @pytest.mark.asyncio

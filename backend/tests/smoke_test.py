@@ -1,11 +1,13 @@
 import asyncio
 import os
+import pytest
 from datetime import datetime
 from beanie import init_beanie
 from pymongo import AsyncMongoClient
 from backend.models import User, Session, Recipe, Exercise, SetEntry, Ingredient, MacroTargets
 
-async def run_smoke_test():
+@pytest.mark.asyncio
+async def test_smoke():
     # Use the base ironlog database
     db_url = os.getenv("DATABASE_URL", "mongodb://localhost:27017/ironlog")
     print(f"--- Starting Smoke Test ---")
@@ -68,15 +70,13 @@ async def run_smoke_test():
 
         # 4. Verification Cleanup (Optional)
         found_user = await User.find_one(User.username == test_username)
-        if found_user:
-            print(f"✅ Verification: Found user {found_user.username} in DB.")
+        assert found_user is not None
+        print(f"✅ Verification: Found user {found_user.username} in DB.")
         
         print(f"--- Smoke Test Passed! ---")
 
-    except Exception as e:
-        print(f"❌ Smoke Test Failed: {e}")
     finally:
         await client.close()
 
 if __name__ == "__main__":
-    asyncio.run(run_smoke_test())
+    asyncio.run(test_smoke())
