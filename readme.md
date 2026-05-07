@@ -13,11 +13,6 @@ A comprehensive full-stack fitness, nutrition, and meal-planning application des
 
 ## Getting Started
 
-### Prerequisites
-- **Node.js** (v16 or higher)
-- **npm**
-- **Database**: MongoDB
-
 ### Installation & Setup
 
 1. **Clone the Repository**
