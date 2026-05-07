@@ -36,7 +36,7 @@ function MacroRing({ goalCals, goalProt, goalCarbs, goalFat }) {
 
   const segs = [
     { value: protCal, color: "#1E90FF", label: "PRO" },
-    { value: carbCal, color: "#ff69b4", label: "CHO" },
+    { value: carbCal, color: "#ff69b4", label: "CARB" },
     { value: fatCal, color: "#32CD32", label: "FAT" },
   ];
 
