@@ -15,8 +15,8 @@ A comprehensive full-stack fitness, nutrition, and meal-planning application des
 
 ### Prerequisites
 - **Node.js** (v16 or higher)
-- **npm** or **yarn**
-- **Database**: [Specify your DB, e.g., PostgreSQL/MongoDB]
+- **npm**
+- **Database**: MongoDB
 
 ### Installation & Setup
 
