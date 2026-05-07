@@ -27,14 +27,9 @@ A comprehensive full-stack fitness, nutrition, and meal-planning application des
    ```
 
 2. **Backend Configuration**
-   - Navigate to the server directory: `cd backend`
-   - Install dependencies: `npm install`
-   - Create a `.env` file and configure:
-     ```env
-     DATABASE_URL=your_db_connection_string
-     API_KEY=your_macro_api_key
-     ```
-   - Start the server: `npm start`
+   - For information about the backend of this program, please reference the readme.md file in the backend directory.
+   - To run backend from project root: `uvicorn backend.main:app --reload`
+
 
 3. **Frontend Configuration**
    - Navigate to the client directory: `cd frontend`
@@ -91,27 +86,3 @@ The app features an integrated **Macro API Puller**. Users can search for specif
 > ![Grocery List](images/grocery.png)
 
 ---
-
-## Backend Architecture
-
-### Database
-Our database is designed to handle complex relationships between users, their scheduled workouts, saved recipes, and meal plans.
-
-### System Logging & Monitoring
-To ensure reliability and ease of debugging, the backend implements a centralized logging strategy:
-- **Traffic Monitoring**: Logs all incoming HTTP requests and response codes.
-- **Error Tracking**: Detailed error stacks are logged for system failures.
-- **Audit Trail**: Tracking of critical data changes (e.g., user registration, file deletions).
-
-### Security
-- Password hashing using **bcrypt**.
-- Authentication via **JWT (JSON Web Tokens)**.
-
----
-
-## Testing & Quality Assurance
-
-Stability is maintained through a multi-tiered testing suite:
-- **Unit Tests**: Verifying individual logic components (e.g., macro calculations).
-- **Integration Tests**: Ensuring seamless communication between the React frontend and the Node.js API.
-- **End-to-End (E2E) Tests**: Simulating complete user journeys, such as "Register -> Create Meal Plan -> Download Grocery List."
