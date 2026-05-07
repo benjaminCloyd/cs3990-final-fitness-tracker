@@ -54,16 +54,19 @@ Maintain a complete history of your physical activity with full CRUD capabilitie
 - **Edit Logs**: Update entries to correct mistakes or adjust data.
 - **Remove Entries**: Delete logs that are no longer relevant to your history.
 
+> **Excersise Log**
 > ![Workout Tracking](images/multipleExercise.png)
 
 ### 2. Progress Visualization
 The application utilizes **Chart.js** to transform raw data into visual insights. Users can track their weight trends, strength increases, and caloric consistency over time.
 
+> **Progress Chart**
 > ![Progress Charts](images/progress.png)
 
 ### 3. Nutrition & Macro API Integration
 The app features an integrated **Macro API Puller**. Users can search for specific food items, and the application fetches real-time nutritional data (Calories, Protein, Carbs, and Fats) from a verified external database to ensure accurate logging.
 
+> **Macro API Searching**
 > ![Macro Pulling](images/macrosearch.png)
 
 ### 4. Recipe & Meal Management
@@ -71,16 +74,20 @@ The app features an integrated **Macro API Puller**. Users can search for specif
 - **Create Meal Plans**: Organize your week by assigning recipes to specific days.
 - **Recipe Image Upload**: (File Upload) Users can personalize their saved recipes by uploading custom images of their prepared meals.
 
+> **Recipe Page**
 > ![Recipes](images/recipes.png)
 
+> **Image Uploaded to Recipe**
 > ![Recipes Images](images/recipes2.png)
 
+> **Meal Plan Page**
 > ![Meal Plan](images/mealplan.png)
 
 ### 5. Grocery List Generation
 - **Automatic Generation**: The app parses your weekly meal plan to identify all necessary ingredients.
 - **Export List**: (File Download) Users can download their generated grocery list as a portable file (e.g., PDF or Text) for easy use while shopping.
 
+> **Generated Grocery List**
 > ![Grocery List](images/grocery.png)
 
 ---
