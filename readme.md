@@ -7,8 +7,7 @@ A comprehensive full-stack fitness, nutrition, and meal-planning application des
 ## Project Preview
 
 > **Dashboard Overview**  
-> ![Dashboard Screenshot]([INSERT SCREENSHOT OF MAIN DASHBOARD HERE])
-> *Placeholder: Add a screenshot showing the main user interface and summary statistics.*
+> ![Dashboard Screenshot](images/dashboard.png)
 
 ---
 
@@ -44,7 +43,7 @@ A comprehensive full-stack fitness, nutrition, and meal-planning application des
 
 ---
 
-## 🛠 Project Features & User Capabilities
+## Project Features & User Capabilities
 
 Our application provides a holistic approach to health management, allowing users to handle everything from workout intensity to weekly food preparation.
 
@@ -55,30 +54,34 @@ Maintain a complete history of your physical activity with full CRUD capabilitie
 - **Edit Logs**: Update entries to correct mistakes or adjust data.
 - **Remove Entries**: Delete logs that are no longer relevant to your history.
 
-> ![Workout Tracking]([INSERT SCREENSHOT OF WORKOUT LOGGING INTERFACE HERE])
+> ![Workout Tracking](images/multipleExercise.png)
 
 ### 2. Progress Visualization
 The application utilizes **Chart.js** to transform raw data into visual insights. Users can track their weight trends, strength increases, and caloric consistency over time.
 
-> ![Progress Charts]([INSERT SCREENSHOT OF PROGRESS CHARTS/GRAPHS HERE])
+> ![Progress Charts](images/progress.png)
 
 ### 3. Nutrition & Macro API Integration
 The app features an integrated **Macro API Puller**. Users can search for specific food items, and the application fetches real-time nutritional data (Calories, Protein, Carbs, and Fats) from a verified external database to ensure accurate logging.
 
-> ![Macro Pulling]([INSERT SCREENSHOT OF API FOOD SEARCH RESULTS HERE])
+> ![Macro Pulling](images/macrosearch.png)
 
 ### 4. Recipe & Meal Management
 - **Save Recipes**: Create a digital cookbook of your favorite healthy meals.
 - **Create Meal Plans**: Organize your week by assigning recipes to specific days.
 - **Recipe Image Upload**: (File Upload) Users can personalize their saved recipes by uploading custom images of their prepared meals.
 
-> ![Recipes]([INSERT SCREENSHOT OF RECIPE GALLERY OR UPLOAD PAGE HERE])
+> ![Recipes](images/recipes.png)
+
+> ![Recipes Images](images/recipes2.png)
+
+> ![Meal Plan](images/mealplan.png)
 
 ### 5. Grocery List Generation
 - **Automatic Generation**: The app parses your weekly meal plan to identify all necessary ingredients.
 - **Export List**: (File Download) Users can download their generated grocery list as a portable file (e.g., PDF or Text) for easy use while shopping.
 
-> ![Grocery List]([INSERT SCREENSHOT OF GENERATED GROCERY LIST HERE])
+> ![Grocery List](images/grocery.png)
 
 ---
 
@@ -86,9 +89,6 @@ The app features an integrated **Macro API Puller**. Users can search for specif
 
 ### Database
 Our database is designed to handle complex relationships between users, their scheduled workouts, saved recipes, and meal plans.
-
-> **Schema Diagram**  
-> ![Database Schema]([INSERT SCREENSHOT OF DATABASE SCHEMA OR ERD HERE])
 
 ### System Logging & Monitoring
 To ensure reliability and ease of debugging, the backend implements a centralized logging strategy:
@@ -108,8 +108,3 @@ Stability is maintained through a multi-tiered testing suite:
 - **Unit Tests**: Verifying individual logic components (e.g., macro calculations).
 - **Integration Tests**: Ensuring seamless communication between the React frontend and the Node.js API.
 - **End-to-End (E2E) Tests**: Simulating complete user journeys, such as "Register -> Create Meal Plan -> Download Grocery List."
-
-Run tests with:
-```bash
-npm test
-```
